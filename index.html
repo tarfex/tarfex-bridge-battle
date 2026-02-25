@@ -68,7 +68,7 @@ body {
   transform:translateX(-50%);
   z-index:200;
 }
-#muteBtn, #resetBtn {
+#muteBtn, #resetBtn, #startGameBtn {
   padding:8px 14px;
   border:none;
   border-radius:12px;
@@ -77,8 +77,9 @@ body {
   font-weight:bold;
   cursor:pointer;
   box-shadow:0 0 10px #0ff,0 0 20px #0ff;
+  transition:all 0.3s;
 }
-#muteBtn:hover, #resetBtn:hover { transform:scale(1.05); }
+#muteBtn:hover, #resetBtn:hover, #startGameBtn:hover { transform:scale(1.05); }
 
 /* Start screen */
 .start-screen {
@@ -100,16 +101,32 @@ body {
 }
 .start-screen button {
   margin-top:20px;
+  padding:10px 20px;
+  border-radius:12px;
+  border:none;
+  background:#0ff;
+  color:black;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 10px #0ff,0 0 20px #0ff;
+  transition:all 0.3s;
+}
+.start-screen button:hover {
+  transform:scale(1.05);
+  box-shadow:0 0 20px #0ff,0 0 40px #0ff;
 }
 </style>
 </head>
 <body>
 
+<!-- Background music -->
+<audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
+
 <div class="start-screen" id="startScreen">
   <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
   <p>Inspired by the Ford Mustang Mach-E</p>
-  <button onclick="startGame()">Start Game</button>
+  <button id="startGameBtn" onclick="startGame()">Start Game</button>
 </div>
 
 <h2 id="turnText"></h2>
@@ -124,6 +141,7 @@ body {
 
 <div id="controls">
   <button id="resetBtn" onclick="resetGame()">Reset Game</button>
+  <button id="muteBtn" onclick="toggleMusic()">Mute</button>
 </div>
 
 <script>
@@ -131,12 +149,19 @@ const GRID_SIZE = 8;
 let grid = [];
 let player = 1;
 let winner = null;
+const music = document.getElementById('bgMusic');
 
 function startGame(){
   document.getElementById('startScreen').style.display='none';
+  music.play().catch(e=>console.log("Autoplay blocked"));
   createGrid();
   renderGrid();
   updateTurnText();
+}
+
+function toggleMusic(){
+  if(music.paused){ music.play(); document.getElementById('muteBtn').innerText='Mute'; }
+  else { music.pause(); document.getElementById('muteBtn').innerText='Unmute'; }
 }
 
 function createGrid(){
@@ -186,7 +211,6 @@ function resetGame(){
 }
 
 function checkWin(p){
-  // Simple DFS to find path from top-left or left to bottom-right or right
   const visited = new Set();
   let found = false;
   function dfs(r,c){
