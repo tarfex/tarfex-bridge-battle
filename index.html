@@ -12,23 +12,23 @@ body {
 
 /* CONTROLS AT BOTTOM */
 #controls {
-  display:flex; flex-direction:column; align-items:center; gap:10px;
+  display:flex; justify-content:center; align-items:center; gap:10px;
   position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
   z-index:200;
 }
-#muteBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black;
-  font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; text-shadow:0 0 5px #0ff; transition:all 0.3s; }
+#muteBtn {
+  padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black;
+  font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; text-shadow:0 0 5px #0ff; transition:all 0.3s;
+}
 #muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #0ff,0 0 40px #0ff; }
 
-.volume-control { display:flex; flex-direction:column; gap:8px; font-size:12px; color:#0ff; text-align:center; }
-.volume-control label { display:flex; justify-content:space-between; width:180px; text-shadow:0 0 4px #0ff; }
-.volume-control input[type=range] { -webkit-appearance:none; width:100%; height:8px; border-radius:5px; background:#111; box-shadow:0 0 5px #0ff inset; cursor:pointer; }
-.volume-control input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#0ff; box-shadow:0 0 8px #0ff; }
-.volume-control input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:#0ff; box-shadow:0 0 8px #0ff; }
-
 /* START SCREEN */
-.start-screen { text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; animation: fadeIn 1s ease forwards; }
-.start-screen img { max-width:90vw; max-height:40vh; margin-bottom:10px; border-radius:12px; box-shadow:0 0 20px #00f,0 0 40px #0ff; animation:pulseCar 2s infinite alternate; }
+.start-screen {
+  text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; animation: fadeIn 1s ease forwards;
+}
+.start-screen img {
+  max-width:90vw; max-height:40vh; margin-bottom:10px; border-radius:12px; box-shadow:0 0 20px #00f,0 0 40px #0ff; animation:pulseCar 2s infinite alternate;
+}
 @keyframes pulseCar { 0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} }
 @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 .start-screen h1 { font-size:2em; margin-bottom:5px; text-shadow:0 0 6px cyan; }
@@ -43,12 +43,6 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
 .blue { background:#007bff; }
 .red { background:#ff3333; }
-
-/* WINNING PATH ANIMATION */
-@keyframes pulseWinBlue { 0%{box-shadow:0 0 8px #00f,0 0 16px #0ff;} 50%{box-shadow:0 0 16px #00f,0 0 32px #0ff;} 100%{box-shadow:0 0 8px #00f,0 0 16px #0ff;} }
-@keyframes pulseWinRed { 0%{box-shadow:0 0 8px #f00,0 0 16px #ff3333;} 50%{box-shadow:0 0 16px #f00,0 0 32px #ff3333;} 100%{box-shadow:0 0 8px #f00,0 0 16px #ff3333;} }
-.energyBlue { background:linear-gradient(90deg,#007bff,#00f); box-shadow:0 0 8px #00f; }
-.energyRed { background:linear-gradient(90deg,#ff3333,#f00); box-shadow:0 0 8px #f00; }
 
 #gridWrapper::before, #gridWrapper::after { content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; z-index:1; }
 #gridWrapper::before { top:-8px; border-radius:4px 4px 0 0; }
@@ -66,17 +60,11 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
 <div id="energyFlow"></div>
 
-<!-- AUDIO -->
+<!-- BACKGROUND MUSIC -->
 <audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
-<audio id="clickSound" src="https://www.soundjay.com/button/sounds/button-16.mp3" preload="auto"></audio>
-<audio id="winSound" src="https://www.soundjay.com/human/sounds/applause-8.mp3" loop preload="auto"></audio>
 
 <div id="controls">
   <button id="muteBtn" onclick="toggleMusic()">Mute</button>
-  <div class="volume-control">
-    <label>Music <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.5"></label>
-    <label>Sound FX <input type="range" id="clickVolume" min="0" max="1" step="0.01" value="0.5"></label>
-  </div>
 </div>
 
 <div id="startScreen" class="start-screen">
@@ -102,13 +90,6 @@ const GRID_SIZE=8;
 let grid=[],player=1,winner=null,winningPath=[],winInterval=null;
 
 const music=document.getElementById('bgMusic');
-const clickSound=document.getElementById('clickSound');
-const winSound=document.getElementById('winSound');
-const musicVolume=document.getElementById('musicVolume');
-const clickVolume=document.getElementById('clickVolume');
-
-musicVolume.addEventListener('input',()=>music.volume=musicVolume.value);
-clickVolume.addEventListener('input',()=>clickSound.volume=clickVolume.value);
 
 function startGame(){
   document.getElementById('startScreen').style.display='none';
@@ -122,15 +103,12 @@ function toggleMusic(){
   else { music.pause(); muteBtn.innerText='Unmute'; }
 }
 
-function playClick(){ clickSound.currentTime=0; clickSound.play(); }
-
 function createGrid(){
   grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
   player=1;
   winner=null;
   winningPath=[];
   if(winInterval){ clearInterval(winInterval); winInterval=null; }
-  winSound.pause(); winSound.currentTime=0;
   const gridEl=document.getElementById('grid');
   if(gridEl) for(let cell of gridEl.children){ cell.className='cell'; cell.style.animation=''; }
 }
@@ -145,12 +123,7 @@ function renderGrid(){
       cell.classList.add('cell');
       if(grid[r][c]===1) cell.classList.add('blue');
       if(grid[r][c]===2) cell.classList.add('red');
-      if(winningPath.some(pos=>pos[0]===r && pos[1]===c)){
-        cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
-        if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
-        else cell.style.animation='pulseWinRed 1.2s infinite';
-      }
-      cell.onclick=()=>{ playClick(); handleClick(r,c); };
+      cell.onclick=()=>handleClick(r,c);
       gridEl.appendChild(cell);
     }
   }
@@ -166,7 +139,6 @@ function handleClick(r,c){
   if(checkWin(player)){
     winner=player;
     document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`;
-    winSound.currentTime=0; winSound.play();
     animateWinningPath();
   } else {
     player=player===1?2:1;
@@ -209,13 +181,11 @@ function animateWinningPath(){
   let i=0;
   if(winInterval) clearInterval(winInterval);
   winInterval=setInterval(()=>{
-    if(i>=winningPath.length) return;
+    if(i>=winningPath.length){ clearInterval(winInterval); return; }
     const [r,c]=winningPath[i];
     const gridEl=document.getElementById('grid');
     const cell=gridEl.children[r*GRID_SIZE+c];
-    cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
-    if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
-    else cell.style.animation='pulseWinRed 1.2s infinite';
+    cell.style.animation='pulseWinBlue 1.2s infinite';
     i++;
   },150);
 }
