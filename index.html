@@ -10,28 +10,75 @@ body {
   background:black;
   color:white;
   display:flex;
-  flex-direction:column;
-  align-items:center;
+  flex-direction:row; /* allows instructions on left, board on right */
+  justify-content:center;
+  align-items:flex-start;
+  padding-top:40px;
   overflow:hidden;
 }
+
+/* Instructions panel */
+#instructions {
+  width:250px;
+  margin-right:20px;
+  font-size:0.95em;
+  line-height:1.4em;
+  border:1px solid #0ff;
+  border-radius:12px;
+  padding:10px;
+  max-height:80vh;
+  overflow-y:auto;
+}
+
+/* Right side: game area */
+#gameArea {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* Top player turn */
 #turnText { margin-top:20px; font-size:1.5em; text-align:center; }
-#gridWrapper { display:inline-block; position:relative; margin-top:40px; }
+
+/* Grid wrapper and cells */
+#gridWrapper {
+  display:inline-block;
+  position:relative;
+  margin-top:20px;
+}
 .grid { display:grid; grid-gap:2px; }
 .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
 .blue { background:#007bff; }
 .red { background:#ff3333; }
 @keyframes neonBlue { 0% { box-shadow:0 0 5px #007bff;} 50% { box-shadow:0 0 20px #00f;} 100% { box-shadow:0 0 5px #007bff;} }
 @keyframes neonRed { 0% { box-shadow:0 0 5px #ff3333;} 50% { box-shadow:0 0 20px #f00;} 100% { box-shadow:0 0 5px #ff3333;} }
+
+/* Goal borders */
 #gridWrapper::before,#gridWrapper::after{content:'';position:absolute;left:0;width:100%;height:8px;background:#007bff;z-index:1;}
 #gridWrapper::before{top:-8px;border-radius:4px 4px 0 0;}
 #gridWrapper::after{bottom:-8px;border-radius:0 0 4px 4px;}
 #gridWrapper .leftGoal,#gridWrapper .rightGoal{position:absolute;top:0;width:8px;height:100%;z-index:1;}
 #gridWrapper .leftGoal{left:-8px;background:#ff3333;border-radius:4px 0 0 4px;}
 #gridWrapper .rightGoal{right:-8px;background:#ff3333;border-radius:0 4px 4px 0;}
-#controls { display:flex; justify-content:center; align-items:center; gap:10px; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:200; }
+
+/* Bottom controls */
+#controls { display:flex; justify-content:center; align-items:center; gap:10px; margin-top:20px; }
 #muteBtn, #resetBtn, #startGameBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
 #muteBtn:hover,#resetBtn:hover,#startGameBtn:hover{transform:scale(1.05);}
-.start-screen { position:absolute; width:100%; height:100%; background:black; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; color:#0ff; }
+
+/* Start screen */
+.start-screen {
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:black;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  color:#0ff;
+}
 .start-screen img{ max-width:90vw; max-height:40vh; margin-bottom:10px;}
 .start-screen button{ margin-top:20px; padding:10px 20px; border-radius:12px; border:none; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s;}
 .start-screen button:hover{ transform:scale(1.05); box-shadow:0 0 20px #0ff,0 0 40px #0ff; }
@@ -43,6 +90,7 @@ body {
 <!-- Background music -->
 <audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
 
+<!-- Start screen -->
 <div class="start-screen" id="startScreen">
   <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
@@ -51,32 +99,60 @@ body {
     <option value="2p">Two Players</option>
     <option value="ai">Play vs Computer</option>
   </select>
+  <label for="difficultySelect" style="margin-top:10px;">Computer Difficulty:</label>
+  <select id="difficultySelect">
+    <option value="1">1 - Easiest</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5 - Medium</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+    <option value="9">9</option>
+    <option value="10">10 - Hardest</option>
+  </select>
   <button id="startGameBtn" onclick="startGame()">Start Game</button>
 </div>
 
-<h2 id="turnText"></h2>
-
-<div id="gridWrapper">
-  <div class="leftGoal"></div>
-  <div class="rightGoal"></div>
-  <div id="grid" class="grid"></div>
+<!-- Instructions panel -->
+<div id="instructions">
+  <h3>Game Instructions</h3>
+  <p>Welcome to Bridge Battle! Connect your color from one side of the board to the other:</p>
+  <ul>
+    <li>Player 1 (Blue): top to bottom</li>
+    <li>Player 2 (Red): left to right</li>
+  </ul>
+  <p>Take turns placing your tiles. The first player to create a connected path across their goal wins.</p>
+  <p>If playing vs Computer, select a difficulty level (1-10) where 1 is easiest and 10 is hardest.</p>
+  <p>You can reset the game at any time using the Reset button.</p>
+  <p>Use the Mute button to toggle background music.</p>
 </div>
 
-<div id="winnerText" style="margin-top:10px; text-align:center;"></div>
-
-<div id="controls">
-  <button id="resetBtn" onclick="resetGame()">Reset Game</button>
-  <button id="muteBtn" onclick="toggleMusic()">Mute</button>
+<!-- Game Area -->
+<div id="gameArea">
+  <h2 id="turnText"></h2>
+  <div id="gridWrapper">
+    <div class="leftGoal"></div>
+    <div class="rightGoal"></div>
+    <div id="grid" class="grid"></div>
+  </div>
+  <div id="winnerText" style="margin-top:10px; text-align:center;"></div>
+  <div id="controls">
+    <button id="resetBtn" onclick="resetGame()">Reset Game</button>
+    <button id="muteBtn" onclick="toggleMusic()">Mute</button>
+  </div>
 </div>
 
 <script>
 const GRID_SIZE=8;
-let grid=[],player=1,winner=null,vsAI=false;
+let grid=[],player=1,winner=null,vsAI=false,difficulty=5;
 const music=document.getElementById('bgMusic');
 
 function startGame(){
   document.getElementById('startScreen').style.display='none';
   vsAI=document.getElementById('modeSelect').value==='ai';
+  difficulty=parseInt(document.getElementById('difficultySelect').value);
   music.play().catch(e=>console.log("Autoplay blocked"));
   createGrid(); renderGrid(); updateTurnText();
   if(vsAI && player===2) setTimeout(aiMove,300);
@@ -111,13 +187,15 @@ function handleClick(r,c){
   renderGrid(); updateTurnText();
 }
 
-// Smart AI: block player or extend path
+// Smarter AI based on difficulty
 function aiMove(){
   if(winner) return;
-  // First: try to win immediately
-  let move=findWinningMove(2);
-  if(!move) move=findWinningMove(1); // Block player
-  if(!move) move=randomMove(); // Else random
+  let move=null;
+  if(difficulty<=3){ move=randomMove(); } // easy
+  else if(difficulty<=6){ move=findWinningMove(2)||findWinningMove(1)||randomMove(); } // medium
+  else{ // hard
+    move=findBestMove(2)||findWinningMove(2)||findWinningMove(1)||randomMove();
+  }
   const [r,c]=move;
   grid[r][c]=2;
   if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
@@ -128,14 +206,29 @@ function aiMove(){
 function findWinningMove(p){
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]===0){
-        grid[r][c]=p;
-        if(checkWin(p)){ grid[r][c]=0; return [r,c]; }
-        grid[r][c]=0;
-      }
+      if(grid[r][c]===0){ grid[r][c]=p; if(checkWin(p)){ grid[r][c]=0; return [r,c]; } grid[r][c]=0; }
     }
   }
   return null;
+}
+
+// Basic path extension heuristic
+function findBestMove(p){
+  let best=null,score=-Infinity;
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE;c++){
+      if(grid[r][c]===0){
+        let s=0;
+        // prefer center
+        s+=4-Math.abs(r-(GRID_SIZE/2)) + 4-Math.abs(c-(GRID_SIZE/2));
+        // prefer connection to own tiles
+        const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=3; }
+        if(s>score){ score=s; best=[r,c]; }
+      }
+    }
+  }
+  return best;
 }
 
 function randomMove(){
