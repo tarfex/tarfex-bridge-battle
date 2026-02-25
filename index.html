@@ -14,119 +14,28 @@ body {
   align-items:center;
   overflow:hidden;
 }
-
-/* Top player turn */
-#turnText {
-  margin-top:20px;
-  font-size:1.5em;
-  text-align:center;
-}
-
-/* Grid wrapper and cells */
-#gridWrapper {
-  display:inline-block;
-  position:relative;
-  margin-top:40px;
-}
-.grid {
-  display:grid;
-  grid-gap:2px;
-}
-.cell {
-  width:40px;
-  height:40px;
-  border:1px solid #555;
-  border-radius:6px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  transition:all 0.2s;
-}
+#turnText { margin-top:20px; font-size:1.5em; text-align:center; }
+#gridWrapper { display:inline-block; position:relative; margin-top:40px; }
+.grid { display:grid; grid-gap:2px; }
+.cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
 .blue { background:#007bff; }
 .red { background:#ff3333; }
-
-/* Neon glow animations */
-@keyframes neonBlue {
-  0% { box-shadow: 0 0 5px #007bff; }
-  50% { box-shadow: 0 0 20px #00f; }
-  100% { box-shadow: 0 0 5px #007bff; }
-}
-@keyframes neonRed {
-  0% { box-shadow: 0 0 5px #ff3333; }
-  50% { box-shadow: 0 0 20px #f00; }
-  100% { box-shadow: 0 0 5px #ff3333; }
-}
-
-/* Goal borders */
-#gridWrapper::before, #gridWrapper::after { 
-  content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; z-index:1; 
-}
-#gridWrapper::before { top:-8px; border-radius:4px 4px 0 0; }
-#gridWrapper::after { bottom:-8px; border-radius:0 0 4px 4px; }
-#gridWrapper .leftGoal, #gridWrapper .rightGoal { position:absolute; top:0; width:8px; height:100%; z-index:1; }
-#gridWrapper .leftGoal { left:-8px; background:#ff3333; border-radius:4px 0 0 4px; }
-#gridWrapper .rightGoal { right:-8px; background:#ff3333; border-radius:0 4px 4px 0; }
-
-/* Bottom controls */
-#controls {
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:10px;
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:200;
-}
-#muteBtn, #resetBtn, #startGameBtn {
-  padding:8px 14px;
-  border:none;
-  border-radius:12px;
-  background:#0ff;
-  color:black;
-  font-weight:bold;
-  cursor:pointer;
-  box-shadow:0 0 10px #0ff,0 0 20px #0ff;
-  transition:all 0.3s;
-}
-#muteBtn:hover, #resetBtn:hover, #startGameBtn:hover { transform:scale(1.05); }
-
-/* Start screen */
-.start-screen {
-  position:absolute;
-  width:100%;
-  height:100%;
-  background:black;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  color:#0ff;
-}
-.start-screen img {
-  max-width:90vw;
-  max-height:40vh;
-  margin-bottom:10px;
-}
-.start-screen button {
-  margin-top:20px;
-  padding:10px 20px;
-  border-radius:12px;
-  border:none;
-  background:#0ff;
-  color:black;
-  font-weight:bold;
-  cursor:pointer;
-  box-shadow:0 0 10px #0ff,0 0 20px #0ff;
-  transition:all 0.3s;
-}
-.start-screen button:hover {
-  transform:scale(1.05);
-  box-shadow:0 0 20px #0ff,0 0 40px #0ff;
-}
+@keyframes neonBlue { 0% { box-shadow:0 0 5px #007bff;} 50% { box-shadow:0 0 20px #00f;} 100% { box-shadow:0 0 5px #007bff;} }
+@keyframes neonRed { 0% { box-shadow:0 0 5px #ff3333;} 50% { box-shadow:0 0 20px #f00;} 100% { box-shadow:0 0 5px #ff3333;} }
+#gridWrapper::before,#gridWrapper::after{content:'';position:absolute;left:0;width:100%;height:8px;background:#007bff;z-index:1;}
+#gridWrapper::before{top:-8px;border-radius:4px 4px 0 0;}
+#gridWrapper::after{bottom:-8px;border-radius:0 0 4px 4px;}
+#gridWrapper .leftGoal,#gridWrapper .rightGoal{position:absolute;top:0;width:8px;height:100%;z-index:1;}
+#gridWrapper .leftGoal{left:-8px;background:#ff3333;border-radius:4px 0 0 4px;}
+#gridWrapper .rightGoal{right:-8px;background:#ff3333;border-radius:0 4px 4px 0;}
+#controls { display:flex; justify-content:center; align-items:center; gap:10px; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:200; }
+#muteBtn, #resetBtn, #startGameBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
+#muteBtn:hover,#resetBtn:hover,#startGameBtn:hover{transform:scale(1.05);}
+.start-screen { position:absolute; width:100%; height:100%; background:black; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; color:#0ff; }
+.start-screen img{ max-width:90vw; max-height:40vh; margin-bottom:10px;}
+.start-screen button{ margin-top:20px; padding:10px 20px; border-radius:12px; border:none; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s;}
+.start-screen button:hover{ transform:scale(1.05); box-shadow:0 0 20px #0ff,0 0 40px #0ff; }
+.start-screen select{ margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -138,6 +47,10 @@ body {
   <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
   <p>Inspired by the Ford Mustang Mach-E</p>
+  <select id="modeSelect">
+    <option value="2p">Two Players</option>
+    <option value="ai">Play vs Computer</option>
+  </select>
   <button id="startGameBtn" onclick="startGame()">Start Game</button>
 </div>
 
@@ -157,101 +70,95 @@ body {
 </div>
 
 <script>
-const GRID_SIZE = 8;
-let grid = [];
-let player = 1;
-let winner = null;
-const music = document.getElementById('bgMusic');
+const GRID_SIZE=8;
+let grid=[],player=1,winner=null,vsAI=false;
+const music=document.getElementById('bgMusic');
 
 function startGame(){
   document.getElementById('startScreen').style.display='none';
+  vsAI=document.getElementById('modeSelect').value==='ai';
   music.play().catch(e=>console.log("Autoplay blocked"));
-  createGrid();
-  renderGrid();
-  updateTurnText();
+  createGrid(); renderGrid(); updateTurnText();
+  if(vsAI && player===2) setTimeout(aiMove,300);
 }
 
-function toggleMusic(){
-  if(music.paused){ music.play(); document.getElementById('muteBtn').innerText='Mute'; }
-  else { music.pause(); document.getElementById('muteBtn').innerText='Unmute'; }
-}
+function toggleMusic(){ if(music.paused){music.play(); muteBtn.innerText='Mute';} else{music.pause(); muteBtn.innerText='Unmute';} }
 
-function createGrid(){
-  grid = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
-  player = 1;
-  winner = null;
-  document.getElementById('winnerText').innerText = '';
-}
+function createGrid(){ grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); player=1; winner=null; document.getElementById('winnerText').innerText=''; }
 
 function renderGrid(){
-  const gridEl = document.getElementById('grid');
-  gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE},40px)`;
-  gridEl.innerHTML = '';
+  const gridEl=document.getElementById('grid');
+  gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`;
+  gridEl.innerHTML='';
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
-      const cell = document.createElement('div');
-      cell.classList.add('cell');
+      const cell=document.createElement('div'); cell.classList.add('cell');
       if(grid[r][c]===1) cell.classList.add('blue');
       if(grid[r][c]===2) cell.classList.add('red');
-      cell.addEventListener('click', ()=> handleClick(r,c));
+      cell.addEventListener('click',()=>handleClick(r,c));
       gridEl.appendChild(cell);
     }
   }
 }
 
-function updateTurnText(){
-  document.getElementById('turnText').innerText = winner ? '' : `Player ${player}'s Turn`;
-}
+function updateTurnText(){ document.getElementById('turnText').innerText=winner?'':`Player ${player}'s Turn`; }
 
 function handleClick(r,c){
-  if(grid[r][c] !== 0 || winner) return;
-  grid[r][c] = player;
-  if(checkWin(player)){
-    winner = player;
-    document.getElementById('winnerText').innerText = `Player ${player} Wins!`;
-    glowWinningTiles(player);
-  } else {
-    player = player === 1 ? 2 : 1;
-  }
-  renderGrid();
-  updateTurnText();
+  if(grid[r][c]!==0 || winner || (vsAI && player===2)) return;
+  grid[r][c]=player;
+  if(checkWin(player)){ winner=player; document.getElementById('winnerText').innerText=`Player ${player} Wins!`; glowWinningTiles(player);}
+  else{ player=player===1?2:1; if(vsAI && player===2) setTimeout(aiMove,300);}
+  renderGrid(); updateTurnText();
 }
 
-// Glow winning tiles without interfering with reset
-function glowWinningTiles(p){
-  const gridEl = document.getElementById('grid');
+// Smart AI: block player or extend path
+function aiMove(){
+  if(winner) return;
+  // First: try to win immediately
+  let move=findWinningMove(2);
+  if(!move) move=findWinningMove(1); // Block player
+  if(!move) move=randomMove(); // Else random
+  const [r,c]=move;
+  grid[r][c]=2;
+  if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
+  else player=1;
+  renderGrid(); updateTurnText();
+}
+
+function findWinningMove(p){
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]===p){
-        const cell = gridEl.children[r*GRID_SIZE+c];
-        cell.style.animation = p===1 ? 'neonBlue 1s infinite alternate' : 'neonRed 1s infinite alternate';
+      if(grid[r][c]===0){
+        grid[r][c]=p;
+        if(checkWin(p)){ grid[r][c]=0; return [r,c]; }
+        grid[r][c]=0;
       }
     }
   }
+  return null;
 }
 
-function resetGame(){
-  createGrid();
-  renderGrid();
-  updateTurnText();
+function randomMove(){
+  const empty=[];
+  for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===0) empty.push([r,c]);
+  return empty[Math.floor(Math.random()*empty.length)];
 }
+
+// Glow winning tiles
+function glowWinningTiles(p){
+  const gridEl=document.getElementById('grid');
+  for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===p){ const cell=gridEl.children[r*GRID_SIZE+c]; cell.style.animation=p===1?'neonBlue 1s infinite alternate':'neonRed 1s infinite alternate'; }
+}
+
+function resetGame(){ createGrid(); renderGrid(); updateTurnText(); }
 
 function checkWin(p){
-  const visited = new Set();
-  let found = false;
-  function dfs(r,c){
-    const key = r+'-'+c;
-    if(visited.has(key)) return false;
-    visited.add(key);
+  const visited=new Set(); let found=false;
+  function dfs(r,c){ const key=r+'-'+c; if(visited.has(key)) return false; visited.add(key);
     if(p===1 && r===GRID_SIZE-1){ found=true; return true; }
     if(p===2 && c===GRID_SIZE-1){ found=true; return true; }
     const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-    for(const [dr,dc] of dirs){
-      const nr = r+dr, nc = c+dc;
-      if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){
-        if(dfs(nr,nc)) return true;
-      }
-    }
+    for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){ if(dfs(nr,nc)) return true; } }
     return false;
   }
   if(p===1){ for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break; }
