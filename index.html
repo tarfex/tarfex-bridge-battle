@@ -4,111 +4,87 @@
 <meta charset="UTF-8">
 <title>Tarfex Bridge Battle</title>
 <style>
-  body { 
-    margin:0; 
-    display:flex; 
-    flex-direction:column; 
-    justify-content:center; 
-    align-items:center; 
-    height:100vh; 
-    background:black; 
-    color:white; 
-    font-family:sans-serif; 
-    position:relative;
-  }
+body { 
+  margin:0; 
+  display:flex; 
+  flex-direction:column; 
+  justify-content:center; 
+  align-items:center; 
+  height:100vh; 
+  background:black; 
+  color:white; 
+  font-family:sans-serif; 
+  position:relative;
+  overflow:hidden;
+}
 
-  /* MUTE BUTTON TOP RIGHT */
-  #muteBtn {
-    position:fixed;
-    top:10px;
-    right:10px;
-    padding:8px 14px;
-    border:none;
-    border-radius:8px;
-    background:#00f;
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
-    box-shadow:0 0 10px #00f,0 0 20px #0ff;
-    transition:all 0.3s;
-    z-index:100;
-  }
-  #muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #00f,0 0 40px #0ff; }
+/* MUTE BUTTON */
+#muteBtn {
+  position:fixed; top:10px; right:10px;
+  padding:8px 14px; border:none; border-radius:12px;
+  background:#0ff; color:black; font-weight:bold; cursor:pointer;
+  box-shadow:0 0 10px #0ff,0 0 20px #0ff,0 0 30px #00f; text-shadow:0 0 5px #0ff;
+  transition:all 0.3s; z-index:100;
+}
+#muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #0ff,0 0 40px #0ff,0 0 50px #00f; }
 
-  /* START SCREEN */
-  .start-screen { 
-    text-align:center; 
-    animation: fadeIn 1s ease forwards; 
-    display:flex; 
-    flex-direction:column; 
-    align-items:center; 
-    justify-content:center;
-  }
+/* VOLUME SLIDERS */
+.volume-control { position: fixed; top:60px; right:10px; display:flex; flex-direction:column; gap:8px; z-index:100; font-size:12px; color:#0ff; }
+.volume-control label { display:flex; justify-content:space-between; width:140px; text-shadow:0 0 4px #0ff; }
+.volume-control input[type=range] { -webkit-appearance:none; width:140px; height:8px; border-radius:5px; background:#111; box-shadow:0 0 5px #0ff inset; cursor:pointer; }
+.volume-control input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#0ff; box-shadow:0 0 8px #0ff,0 0 12px #0ff; }
+.volume-control input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:#0ff; box-shadow:0 0 8px #0ff,0 0 12px #0ff; }
 
-  .start-screen img {
-    max-width: 90vw;   /* scale with viewport width */
-    max-height: 40vh;  /* limit height so it doesn’t push content off-screen */
-    width: auto;
-    height: auto;
-    margin-bottom:10px;
-    border-radius:12px;
-    box-shadow:0 0 20px #00f,0 0 40px #0ff;
-    animation: pulseCar 2s infinite alternate;
-  }
+/* START SCREEN */
+.start-screen { text-align:center; animation: fadeIn 1s ease forwards; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1; }
+.start-screen img { max-width:90vw; max-height:40vh; margin-bottom:10px; border-radius:12px; box-shadow:0 0 20px #00f,0 0 40px #0ff; animation:pulseCar 2s infinite alternate; }
+@keyframes pulseCar { 0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} }
+@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+.start-screen h1 { font-size:2em; margin-bottom:5px; text-shadow:0 0 6px cyan; }
+.start-screen p { font-style:italic; font-size:1em; color:#0ff; margin-bottom:15px; text-shadow:0 0 4px #0ff; }
 
-  @keyframes pulseCar { 
-    0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 
-    100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} 
-  }
+button { margin-top:10px; padding:10px 20px; border-radius:14px; border:none; font-size:16px; cursor:pointer; background:#0ff; color:black; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
+button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
-  @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+/* GRID & ENERGY BACKGROUND */
+#gridWrapper { display:inline-block; position:relative; margin-top:20px; }
+.grid { display:grid; grid-gap:2px; position: relative; z-index:2; }
+.cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.blue { background:#007bff; }
+.red { background:#ff3333; }
 
-  .start-screen h1 { font-size:2em; margin-bottom:5px; text-shadow:0 0 6px cyan; }
-  .start-screen p { font-style:italic; font-size:1em; color:#0ff; margin-bottom:15px; text-shadow:0 0 4px #0ff; }
+/* WINNING PATH ANIMATION */
+@keyframes pulseWinBlue { 0%{box-shadow:0 0 8px #00f,0 0 16px #0ff;} 50%{box-shadow:0 0 16px #00f,0 0 32px #0ff;} 100%{box-shadow:0 0 8px #00f,0 0 16px #0ff;} }
+@keyframes pulseWinRed { 0%{box-shadow:0 0 8px #f00,0 0 16px #ff3333;} 50%{box-shadow:0 0 16px #f00,0 0 32px #ff3333;} 100%{box-shadow:0 0 8px #f00,0 0 16px #ff3333;} }
+.energyBlue { background:linear-gradient(90deg,#007bff,#00f); box-shadow:0 0 8px #00f; }
+.energyRed { background:linear-gradient(90deg,#ff3333,#f00); box-shadow:0 0 8px #f00; }
 
-  button { 
-    margin-top:10px; 
-    padding:10px 20px; 
-    border-radius:14px; 
-    border:none; 
-    font-size:16px; 
-    cursor:pointer; 
-    background:#00f; 
-    color:white; 
-    box-shadow:0 0 10px #00f,0 0 20px #0ff; 
-    transition:all 0.3s; 
-  }
-  button:hover { box-shadow:0 0 20px #00f,0 0 40px #0ff; transform:scale(1.05); }
+#gridWrapper::before, #gridWrapper::after { content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; z-index:1; }
+#gridWrapper::before { top:-8px; border-radius:4px 4px 0 0; }
+#gridWrapper::after { bottom:-8px; border-radius:0 0 4px 4px; }
+#gridWrapper .leftGoal, #gridWrapper .rightGoal { position:absolute; top:0; width:8px; height:100%; z-index:1; }
+#gridWrapper .leftGoal { left:-8px; background:#ff3333; border-radius:4px 0 0 4px; }
+#gridWrapper .rightGoal { right:-8px; background:#ff3333; border-radius:0 4px 4px 0; }
 
-  /* GRID & WRAPPER */
-  #gridWrapper { display:inline-block; position:relative; margin-top:20px; }
-  .grid { display:grid; grid-gap:2px; position: relative; }
-  .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
-  .blue { background:#007bff; }
-  .red { background:#ff3333; }
-
-  /* ENERGY FLOW */
-  .energyBlue { background:linear-gradient(90deg,#007bff,#00f); box-shadow:0 0 8px #00f; }
-  .energyRed { background:linear-gradient(90deg,#ff3333,#f00); box-shadow:0 0 8px #f00; }
-
-  /* GOAL BORDERS */
-  #gridWrapper::before, #gridWrapper::after { content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; }
-  #gridWrapper::before { top:-8px; border-radius:4px 4px 0 0; }
-  #gridWrapper::after { bottom:-8px; border-radius:0 0 4px 4px; }
-  #gridWrapper .leftGoal, #gridWrapper .rightGoal { position:absolute; top:0; width:8px; height:100%; }
-  #gridWrapper .leftGoal { left:-8px; background:#ff3333; border-radius:4px 0 0 4px; }
-  #gridWrapper .rightGoal { right:-8px; background:#ff3333; border-radius:0 4px 4px 0; }
+/* ENERGY FLOW BACKGROUND */
+#energyFlow { position:absolute; width:100%; height:100%; top:0; left:0; background:repeating-linear-gradient(45deg, rgba(0,255,255,0.05) 0, rgba(0,255,255,0.05) 2px, transparent 2px, transparent 8px); z-index:0; animation: flow 2s linear infinite; }
+@keyframes flow { 0% {background-position:0 0;} 100% {background-position:100px 100px;} }
 </style>
 </head>
 <body>
 
-<!-- BACKGROUND MUSIC -->
-<audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
+<div id="energyFlow"></div>
 
-<!-- MUTE BUTTON -->
+<audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
+<audio id="clickSound" src="https://www.orangefreesounds.com/wp-content/uploads/2014/08/Mouse-click-1.mp3" preload="auto"></audio>
+
 <button id="muteBtn" onclick="toggleMusic()">Mute</button>
 
-<!-- START SCREEN -->
+<div class="volume-control">
+  <label>Music <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.5"></label>
+  <label>Click <input type="range" id="clickVolume" min="0" max="1" step="0.01" value="0.5"></label>
+</div>
+
 <div id="startScreen" class="start-screen">
   <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
@@ -116,7 +92,6 @@
   <button onclick="startGame()">Start Game</button>
 </div>
 
-<!-- GAME SCREEN -->
 <div id="game" style="display:none;">
   <h2 id="turnText"></h2>
   <div id="gridWrapper">
@@ -129,125 +104,73 @@
 </div>
 
 <script>
-  const GRID_SIZE = 8;
-  let grid = [];
-  let player = 1;
-  let winner = null;
-  let winningPath = [];
-  const music = document.getElementById('bgMusic');
-  const muteBtn = document.getElementById('muteBtn');
+const GRID_SIZE=8;
+let grid=[],player=1,winner=null,winningPath=[];
+const music=document.getElementById('bgMusic');
+const clickSound=document.getElementById('clickSound');
+const muteBtn=document.getElementById('muteBtn');
+const musicVolume=document.getElementById('musicVolume');
+const clickVolume=document.getElementById('clickVolume');
 
-  function startGame() {
-    document.getElementById('startScreen').style.display='none';
-    document.getElementById('game').style.display='block';
+musicVolume.addEventListener('input',()=>music.volume=musicVolume.value);
+clickVolume.addEventListener('input',()=>clickSound.volume=clickVolume.value);
 
-    music.volume = 0.5;
-    music.play().catch(e=>console.log("Autoplay blocked"));
+function startGame(){
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('game').style.display='block';
+  music.play().catch(e=>console.log("Autoplay blocked"));
+  createGrid(); renderGrid(); updateTurnText();
+}
 
-    createGrid();
-    renderGrid();
-    updateTurnText();
-  }
-
-  function toggleMusic() {
-    if(music.paused) {
-      music.play();
-      muteBtn.innerText = 'Mute';
-    } else {
-      music.pause();
-      muteBtn.innerText = 'Unmute';
-    }
-  }
-
-  function createGrid() {
-    grid = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
-    winningPath = [];
-  }
-
-  function renderGrid() {
-    const gridEl = document.getElementById('grid');
-    gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 40px)`;
-    gridEl.innerHTML='';
-    for(let r=0;r<GRID_SIZE;r++){
-      for(let c=0;c<GRID_SIZE;c++){
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
-        if(grid[r][c]===1) cell.classList.add('blue');
-        if(grid[r][c]===2) cell.classList.add('red');
-        if(winningPath.some(pos=>pos[0]===r && pos[1]===c)){
-          cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
-        }
-        cell.onclick = ()=>handleClick(r,c);
-        gridEl.appendChild(cell);
-      }
-    }
-  }
-
-  function handleClick(r,c){
-    if(grid[r][c] || winner) return;
-    grid[r][c] = player;
-    if(checkWin(player)){
-      winner = player;
-      document.getElementById('winnerText').innerText = `Player ${player} Wins ⚡`;
-      animateWinningPath();
-    } else {
-      player = player===1?2:1;
-      updateTurnText();
-    }
-    renderGrid();
-  }
-
-  function updateTurnText() {
-    document.getElementById('turnText').innerText = `Player ${player}'s Turn`;
-  }
-
-  function resetGame() {
-    createGrid();
-    player = 1;
-    winner = null;
-    winningPath = [];
-    document.getElementById('winnerText').innerText='';
-    updateTurnText();
-    renderGrid();
-  }
-
-  function checkWin(p){
-    const visited = new Set();
-    let found = false;
-    function dfs(r,c){
-      const key = r+'-'+c;
-      if(visited.has(key)) return false;
-      visited.add(key);
-      if(p===1 && r===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
-      if(p===2 && c===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
-      const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-      for(let [dr,dc] of dirs){
-        let nr=r+dr, nc=c+dc;
-        if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){
-          if(dfs(nr,nc)){ winningPath.push([r,c]); return true; }
-        }
-      }
-      return false;
-    }
-    if(p===1){
-      for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break;
-    } else {
-      for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) break;
-    }
-    return found;
-  }
-
-  function animateWinningPath(){
-    let i=0;
-    const interval = setInterval(()=>{
-      if(i>=winningPath.length){ clearInterval(interval); return; }
-      const [r,c] = winningPath[i];
-      const gridEl = document.getElementById('grid');
-      const cell = gridEl.children[r*GRID_SIZE + c];
+function toggleMusic(){ if(music.paused){ music.play(); muteBtn.innerText='Mute'; } else { music.pause(); muteBtn.innerText='Unmute'; } }
+function playClick(){ clickSound.currentTime=0; clickSound.play(); }
+function createGrid(){ grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); winningPath=[]; }
+function renderGrid(){
+  const gridEl=document.getElementById('grid'); gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`; gridEl.innerHTML='';
+  for(let r=0;r<GRID_SIZE;r++){ for(let c=0;c<GRID_SIZE;c++){
+    const cell=document.createElement('div'); cell.classList.add('cell');
+    if(grid[r][c]===1) cell.classList.add('blue');
+    if(grid[r][c]===2) cell.classList.add('red');
+    if(winningPath.some(pos=>pos[0]===r && pos[1]===c)){
       cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
-      i++;
-    },150);
+      if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
+      else cell.style.animation='pulseWinRed 1.2s infinite';
+    } else { cell.style.animation=''; }
+    cell.onclick=()=>{ playClick(); handleClick(r,c); };
+    gridEl.appendChild(cell);
+  }}
+}
+
+function handleClick(r,c){ if(grid[r][c]||winner) return; grid[r][c]=player;
+if(checkWin(player)){ winner=player; document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`; animateWinningPath(); }
+else{ player=player===1?2:1; updateTurnText(); } renderGrid(); }
+
+function updateTurnText(){ document.getElementById('turnText').innerText=`Player ${player}'s Turn`; }
+function resetGame(){ createGrid(); player=1; winner=null; winningPath=[]; document.getElementById('winnerText').innerText=''; updateTurnText(); renderGrid(); }
+
+function checkWin(p){ const visited=new Set(); let found=false;
+  function dfs(r,c){ const key=r+'-'+c; if(visited.has(key)) return false; visited.add(key);
+    if(p===1 && r===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
+    if(p===2 && c===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    for(let [dr,dc] of dirs){ let nr=r+dr,nc=c+dc;
+      if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){ if(dfs(nr,nc)){ winningPath.push([r,c]); return true; } }
+    } return false;
   }
+  if(p===1){ for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break; }
+  else{ for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) break; }
+  return found;
+}
+
+function animateWinningPath(){ let i=0;
+  const interval=setInterval(()=>{ if(i>=winningPath.length){ clearInterval(interval); return; }
+    const [r,c]=winningPath[i]; const gridEl=document.getElementById('grid'); const cell=gridEl.children[r*GRID_SIZE+c];
+    cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
+    if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
+    else cell.style.animation='pulseWinRed 1.2s infinite';
+    i++;
+  },150);
+}
 </script>
 </body>
 </html>
