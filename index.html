@@ -18,7 +18,7 @@ body {
 }
 
 #instructions {
-  width:250px;
+  width:280px;
   margin-right:20px;
   font-size:0.95em;
   line-height:1.4em;
@@ -101,12 +101,19 @@ body {
 
 <div id="instructions">
   <h3>Game Instructions</h3>
-  <p>Connect your color from your goal to the opposite side:</p>
+  <p>Objective: Connect your side of the board to the opposite side using your color tiles.</p>
   <ul>
-    <li>Player 1 (Blue): top to bottom</li>
-    <li>Player 2 (Red): left to right</li>
+    <li>Player 1 (Blue): connect top to bottom</li>
+    <li>Player 2 (Red): connect left to right</li>
   </ul>
-  <p>Two Players or vs Computer. Reset anytime. Mute background music if needed.</p>
+  <p>Gameplay:</p>
+  <ul>
+    <li>Click on an empty square to place your tile.</li>
+    <li>The first player to connect their goal sides wins.</li>
+    <li>Reset anytime using the Reset button.</li>
+    <li>Background music can be muted using the Mute button.</li>
+    <li>Play against a friend or challenge the computer at Easy, Medium, or Hard.</li>
+  </ul>
 </div>
 
 <div id="gameArea">
@@ -166,13 +173,13 @@ function handleClick(r,c){
   renderGrid(); updateTurnText();
 }
 
-// AI move logic simplified for 3 levels
+// AI move logic from scratch
 function aiMove(){
   if(winner) return;
   let move;
-  if(difficulty===1){ move=randomMove(); } // Easy
-  else if(difficulty===2){ move=findBestMoveAI(2,false); } // Medium
-  else{ move=findBestMoveAI(2,true); } // Hard
+  if(difficulty===1){ move=randomMoveEasy(); } // Easy
+  else if(difficulty===2){ move=randomMoveMedium(); } // Medium
+  else{ move=moveHardAI(); } // Hard
   const [r,c]=move;
   grid[r][c]=2;
   if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
@@ -180,32 +187,74 @@ function aiMove(){
   renderGrid(); updateTurnText();
 }
 
-function randomMove(){
+// Easy: mostly random
+function randomMoveEasy(){
   const empty=[];
   for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===0) empty.push([r,c]);
   return empty[Math.floor(Math.random()*empty.length)];
 }
 
-// AI scoring: blocks, extends path
-function findBestMoveAI(p,strong){
+// Medium: block or extend
+function randomMoveMedium(){
+  // 1. Block immediate threat
+  const block=checkImmediateThreat(1);
+  if(block) return block;
+  // 2. Try to extend own path
+  const extend=extendPath(2);
+  if(extend) return extend;
+  return randomMoveEasy();
+}
+
+// Hard AI: evaluate all possible moves for max path + blocks
+function moveHardAI(){
   let best=null,score=-Infinity;
-  const opp=3-p;
+  const opp=1;
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]===0){
-        let s=0;
-        grid[r][c]=p; if(checkWin(p)) s+=1000; // win immediately
-        grid[r][c]=opp; if(checkWin(opp)) s+=900; // block opponent
-        grid[r][c]=0;
-        if(strong){ // Hard AI
-          const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-          for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=5; }
-        }
-        if(s>score){ score=s; best=[r,c]; }
+      if(grid[r][c]!==0) continue;
+      let s=0;
+      grid[r][c]=2; if(checkWin(2)) s+=1000; // win immediately
+      grid[r][c]=opp; if(checkWin(opp)) s+=900; // block opponent
+      grid[r][c]=2; s+=pathScore(2,r,c); grid[r][c]=0;
+      if(s>score){ score=s; best=[r,c]; }
+    }
+  }
+  return best||randomMoveEasy();
+}
+
+function checkImmediateThreat(p){
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE;c++){
+      if(grid[r][c]!==0) continue;
+      grid[r][c]=p; if(checkWin(p)){ grid[r][c]=0; return [r,c]; } grid[r][c]=0;
+    }
+  }
+  return null;
+}
+
+function extendPath(p){
+  const dirs=[[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE;c++){
+      if(grid[r][c]!==0) continue;
+      for(const [dr,dc] of dirs){
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) return [r,c];
       }
     }
   }
-  return best||randomMove();
+  return null;
+}
+
+// Simple heuristic: number of adjacent tiles for score
+function pathScore(p,r,c){
+  let score=0;
+  const dirs=[[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
+  for(const [dr,dc] of dirs){
+    const nr=r+dr,nc=c+dc;
+    if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) score+=5;
+  }
+  return score;
 }
 
 function glowWinningTiles(p){
