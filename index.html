@@ -1,50 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tarfex Bridge Battle</title>
-  <script src="https://cdn.jsdelivr.net/npm/framer-motion@10.12.16/dist/framer-motion.umd.js"></script>
-  <style>
-    body { margin:0; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:black; color:white; font-family:sans-serif; }
-    .grid { display:grid; grid-gap:2px; margin-top:20px; }
-    .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
-    .blue { background:#007bff; }
-    .red { background:#ff3333; }
-    .winner { box-shadow: 0 0 16px cyan; animation: pulse 1s infinite; }
-    @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.15);} 100% {transform: scale(1);} }
-    .start-screen { text-align:center; }
-    button { margin-top:10px; padding:8px 16px; border-radius:12px; border:none; font-size:16px; cursor:pointer; }
-  </style>
+<meta charset="UTF-8">
+<title>Tarfex Bridge Battle</title>
+<style>
+  body { 
+    margin:0; 
+    display:flex; 
+    flex-direction:column; 
+    justify-content:center; 
+    align-items:center; 
+    height:100vh; 
+    background:black; 
+    color:white; 
+    font-family:sans-serif; 
+    position:relative;
+  }
+
+  /* MUTE BUTTON TOP RIGHT */
+  #muteBtn {
+    position:fixed;
+    top:10px;
+    right:10px;
+    padding:8px 14px;
+    border:none;
+    border-radius:8px;
+    background:#00f;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    box-shadow:0 0 10px #00f,0 0 20px #0ff;
+    transition:all 0.3s;
+    z-index:100;
+  }
+  #muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #00f,0 0 40px #0ff; }
+
+  /* START SCREEN */
+  .start-screen { text-align:center; animation: fadeIn 1s ease forwards; }
+  .start-screen img { max-width:320px; margin-bottom:10px; border-radius:12px; box-shadow:0 0 20px #00f,0 0 40px #0ff; animation: pulseCar 2s infinite alternate; }
+  @keyframes pulseCar { 0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} }
+  @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+  .start-screen h1 { font-size:2em; margin-bottom:5px; text-shadow:0 0 6px cyan; }
+  .start-screen p { font-style:italic; font-size:1em; color:#0ff; margin-bottom:15px; text-shadow:0 0 4px #0ff; }
+
+  button { margin-top:10px; padding:10px 20px; border-radius:14px; border:none; font-size:16px; cursor:pointer; background:#00f; color:white; box-shadow:0 0 10px #00f,0 0 20px #0ff; transition:all 0.3s; }
+  button:hover { box-shadow:0 0 20px #00f,0 0 40px #0ff; transform:scale(1.05); }
+
+  /* GRID & WRAPPER */
+  #gridWrapper { display:inline-block; position:relative; margin-top:20px; }
+  .grid { display:grid; grid-gap:2px; position: relative; }
+  .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+  .blue { background:#007bff; }
+  .red { background:#ff3333; }
+
+  /* ENERGY FLOW */
+  .energyBlue { background:linear-gradient(90deg,#007bff,#00f); box-shadow:0 0 8px #00f; }
+  .energyRed { background:linear-gradient(90deg,#ff3333,#f00); box-shadow:0 0 8px #f00; }
+
+  /* GOAL BORDERS */
+  #gridWrapper::before, #gridWrapper::after { content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; }
+  #gridWrapper::before { top:-8px; border-radius:4px 4px 0 0; }
+  #gridWrapper::after { bottom:-8px; border-radius:0 0 4px 4px; }
+  #gridWrapper .leftGoal, #gridWrapper .rightGoal { position:absolute; top:0; width:8px; height:100%; }
+  #gridWrapper .leftGoal { left:-8px; background:#ff3333; border-radius:4px 0 0 4px; }
+  #gridWrapper .rightGoal { right:-8px; background:#ff3333; border-radius:0 4px 4px 0; }
+</style>
 </head>
 <body>
-  <div id="startScreen" class="start-screen">
-    <h1>Welcome to Tarfex's Bridge Battle</h1>
-    <button onclick="startGame()">Start Game</button>
-  </div>
 
-  <div id="game" style="display:none;">
-    <h2 id="turnText"></h2>
+<!-- BACKGROUND MUSIC -->
+<audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
+
+<!-- MUTE BUTTON -->
+<button id="muteBtn" onclick="toggleMusic()">Mute</button>
+
+<!-- START SCREEN -->
+<div id="startScreen" class="start-screen">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/1/18/Ford_Mustang_Mach-E_2021_IMG_0034.jpg" alt="Mustang Mach-E">
+  <h1>Welcome to Tarfex's Bridge Battle</h1>
+  <p>Inspired by the Ford Mustang Mach-E<br>Music: Ambient Voyager by Zeropage (CC BY 3.0)</p>
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game" style="display:none;">
+  <h2 id="turnText"></h2>
+  <div id="gridWrapper">
+    <div class="leftGoal"></div>
+    <div class="rightGoal"></div>
     <div id="grid" class="grid"></div>
-    <div id="winnerText" style="margin-top:10px;"></div>
-    <button onclick="resetGame()">Reset Game</button>
   </div>
+  <div id="winnerText" style="margin-top:10px;"></div>
+  <button onclick="resetGame()">Reset Game</button>
+</div>
 
 <script>
   const GRID_SIZE = 8;
   let grid = [];
   let player = 1;
   let winner = null;
-
-  function createGrid() {
-    grid = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
-  }
+  let winningPath = [];
+  const music = document.getElementById('bgMusic');
+  const muteBtn = document.getElementById('muteBtn');
 
   function startGame() {
     document.getElementById('startScreen').style.display='none';
     document.getElementById('game').style.display='block';
+
+    music.volume = 0.5;
+    music.play().catch(e=>console.log("Autoplay blocked"));
+
     createGrid();
     renderGrid();
     updateTurnText();
+  }
+
+  function toggleMusic() {
+    if(music.paused) {
+      music.play();
+      muteBtn.innerText = 'Mute';
+    } else {
+      music.pause();
+      muteBtn.innerText = 'Unmute';
+    }
+  }
+
+  function createGrid() {
+    grid = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
+    winningPath = [];
   }
 
   function renderGrid() {
@@ -57,7 +140,9 @@
         cell.classList.add('cell');
         if(grid[r][c]===1) cell.classList.add('blue');
         if(grid[r][c]===2) cell.classList.add('red');
-        if(winner && grid[r][c]===winner) cell.classList.add('winner');
+        if(winningPath.some(pos=>pos[0]===r && pos[1]===c)){
+          cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
+        }
         cell.onclick = ()=>handleClick(r,c);
         gridEl.appendChild(cell);
       }
@@ -70,6 +155,7 @@
     if(checkWin(player)){
       winner = player;
       document.getElementById('winnerText').innerText = `Player ${player} Wins ⚡`;
+      animateWinningPath();
     } else {
       player = player===1?2:1;
       updateTurnText();
@@ -85,6 +171,7 @@
     createGrid();
     player = 1;
     winner = null;
+    winningPath = [];
     document.getElementById('winnerText').innerText='';
     updateTurnText();
     renderGrid();
@@ -92,27 +179,40 @@
 
   function checkWin(p){
     const visited = new Set();
-    const dfs = (r,c)=>{
+    let found = false;
+    function dfs(r,c){
       const key = r+'-'+c;
       if(visited.has(key)) return false;
       visited.add(key);
-      if(p===1 && r===GRID_SIZE-1) return true;
-      if(p===2 && c===GRID_SIZE-1) return true;
+      if(p===1 && r===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
+      if(p===2 && c===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
       const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
       for(let [dr,dc] of dirs){
         let nr=r+dr, nc=c+dc;
         if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){
-          if(dfs(nr,nc)) return true;
+          if(dfs(nr,nc)){ winningPath.push([r,c]); return true; }
         }
       }
       return false;
     }
     if(p===1){
-      for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) return true;
+      for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break;
     } else {
-      for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) return true;
+      for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) break;
     }
-    return false;
+    return found;
+  }
+
+  function animateWinningPath(){
+    let i=0;
+    const interval = setInterval(()=>{
+      if(i>=winningPath.length){ clearInterval(interval); return; }
+      const [r,c] = winningPath[i];
+      const gridEl = document.getElementById('grid');
+      const cell = gridEl.children[r*GRID_SIZE + c];
+      cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
+      i++;
+    },150);
   }
 </script>
 </body>
