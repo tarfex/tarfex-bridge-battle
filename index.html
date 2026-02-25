@@ -10,14 +10,13 @@ body {
   background:black;
   color:white;
   display:flex;
-  flex-direction:row; /* allows instructions on left, board on right */
+  flex-direction:row;
   justify-content:center;
   align-items:flex-start;
   padding-top:40px;
   overflow:hidden;
 }
 
-/* Instructions panel */
 #instructions {
   width:250px;
   margin-right:20px;
@@ -30,17 +29,14 @@ body {
   overflow-y:auto;
 }
 
-/* Right side: game area */
 #gameArea {
   display:flex;
   flex-direction:column;
   align-items:center;
 }
 
-/* Top player turn */
 #turnText { margin-top:20px; font-size:1.5em; text-align:center; }
 
-/* Grid wrapper and cells */
 #gridWrapper {
   display:inline-block;
   position:relative;
@@ -53,7 +49,6 @@ body {
 @keyframes neonBlue { 0% { box-shadow:0 0 5px #007bff;} 50% { box-shadow:0 0 20px #00f;} 100% { box-shadow:0 0 5px #007bff;} }
 @keyframes neonRed { 0% { box-shadow:0 0 5px #ff3333;} 50% { box-shadow:0 0 20px #f00;} 100% { box-shadow:0 0 5px #ff3333;} }
 
-/* Goal borders */
 #gridWrapper::before,#gridWrapper::after{content:'';position:absolute;left:0;width:100%;height:8px;background:#007bff;z-index:1;}
 #gridWrapper::before{top:-8px;border-radius:4px 4px 0 0;}
 #gridWrapper::after{bottom:-8px;border-radius:0 0 4px 4px;}
@@ -61,12 +56,10 @@ body {
 #gridWrapper .leftGoal{left:-8px;background:#ff3333;border-radius:4px 0 0 4px;}
 #gridWrapper .rightGoal{right:-8px;background:#ff3333;border-radius:0 4px 4px 0;}
 
-/* Bottom controls */
 #controls { display:flex; justify-content:center; align-items:center; gap:10px; margin-top:20px; }
 #muteBtn, #resetBtn, #startGameBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
 #muteBtn:hover,#resetBtn:hover,#startGameBtn:hover{transform:scale(1.05);}
 
-/* Start screen */
 .start-screen {
   position:absolute;
   width:100%;
@@ -87,10 +80,8 @@ body {
 </head>
 <body>
 
-<!-- Background music -->
 <audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
 
-<!-- Start screen -->
 <div class="start-screen" id="startScreen">
   <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
@@ -110,26 +101,21 @@ body {
     <option value="7">7</option>
     <option value="8">8</option>
     <option value="9">9</option>
-    <option value="10">10 - Hardest</option>
+    <option value="10">10 - Unbeatable</option>
   </select>
   <button id="startGameBtn" onclick="startGame()">Start Game</button>
 </div>
 
-<!-- Instructions panel -->
 <div id="instructions">
   <h3>Game Instructions</h3>
-  <p>Welcome to Tarfex's Bridge Battle! Connect your color from one side of the board to the other:</p>
+  <p>Connect your color from your goal to the opposite side:</p>
   <ul>
-    <li>Player 1 (Blue): Top to Bottom</li>
-    <li>Player 2 (Red): Left to Right</li>
+    <li>Player 1 (Blue): top to bottom</li>
+    <li>Player 2 (Red): left to right</li>
   </ul>
-  <p>Take turns placing your tiles. The first player to create a connected path across their goal wins.</p>
-  <p>If playing vs Computer, select a difficulty level (1-10) where 1 is easiest and 10 is hardest.</p>
-  <p>You can reset the game at any time using the Reset button.</p>
-  <p>Use the Mute button to toggle background music.</p>
+  <p>Two Players or vs Computer (select difficulty 1-10). Reset anytime. Mute background music if needed.</p>
 </div>
 
-<!-- Game Area -->
 <div id="gameArea">
   <h2 id="turnText"></h2>
   <div id="gridWrapper">
@@ -187,15 +173,14 @@ function handleClick(r,c){
   renderGrid(); updateTurnText();
 }
 
-// Smarter AI based on difficulty
+// AI moves with upgraded difficulty
 function aiMove(){
   if(winner) return;
-  let move=null;
-  if(difficulty<=3){ move=randomMove(); } // easy
-  else if(difficulty<=6){ move=findWinningMove(2)||findWinningMove(1)||randomMove(); } // medium
-  else{ // hard
-    move=findBestMove(2)||findWinningMove(2)||findWinningMove(1)||randomMove();
-  }
+  let move;
+  if(difficulty <= 3){ move = randomMove(); }
+  else if(difficulty <= 6){ move = findWinningMove(2) || findWinningMove(1) || findBestMove(2,2) || randomMove(); }
+  else if(difficulty <= 9){ move = findWinningMove(2) || findWinningMove(1) || findBestMove(2,5) || randomMove(); }
+  else { move = findWinningMove(2) || findWinningMove(1) || findBestMove(2,20) || randomMove(); } // 10 unbeatable
   const [r,c]=move;
   grid[r][c]=2;
   if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
@@ -203,6 +188,7 @@ function aiMove(){
   renderGrid(); updateTurnText();
 }
 
+// Find immediate winning move
 function findWinningMove(p){
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
@@ -212,18 +198,21 @@ function findWinningMove(p){
   return null;
 }
 
-// Basic path extension heuristic
-function findBestMove(p){
+// Smart move scoring for higher difficulties
+function findBestMove(p, weight=5){
   let best=null,score=-Infinity;
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
       if(grid[r][c]===0){
         let s=0;
-        // prefer center
+        // center preference
         s+=4-Math.abs(r-(GRID_SIZE/2)) + 4-Math.abs(c-(GRID_SIZE/2));
-        // prefer connection to own tiles
-        const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-        for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=3; }
+        // neighbor connection bonus
+        const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+        for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=weight; }
+        // blocking opponent slightly
+        const opp=3-p;
+        for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===opp) s+=weight/2; }
         if(s>score){ score=s; best=[r,c]; }
       }
     }
@@ -237,7 +226,6 @@ function randomMove(){
   return empty[Math.floor(Math.random()*empty.length)];
 }
 
-// Glow winning tiles
 function glowWinningTiles(p){
   const gridEl=document.getElementById('grid');
   for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===p){ const cell=gridEl.children[r*GRID_SIZE+c]; cell.style.animation=p===1?'neonBlue 1s infinite alternate':'neonRed 1s infinite alternate'; }
@@ -250,7 +238,7 @@ function checkWin(p){
   function dfs(r,c){ const key=r+'-'+c; if(visited.has(key)) return false; visited.add(key);
     if(p===1 && r===GRID_SIZE-1){ found=true; return true; }
     if(p===2 && c===GRID_SIZE-1){ found=true; return true; }
-    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){ if(dfs(nr,nc)) return true; } }
     return false;
   }
