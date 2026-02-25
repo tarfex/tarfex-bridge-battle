@@ -4,16 +4,17 @@
 <meta charset="UTF-8">
 <title>Tarfex Bridge Battle</title>
 <style>
-body { 
+body {
   margin:0; padding:0;
   display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
   height:100vh; background:black; color:white; font-family:sans-serif; overflow:hidden;
 }
 
-/* CONTROLS AT TOP */
+/* CONTROLS AT BOTTOM */
 #controls {
-  display:flex; flex-direction:column; align-items:center; margin:60px 0 0 0; gap:10px; /* pushed down from top */
-  position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:200;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  z-index:200;
 }
 #muteBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black;
   font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; text-shadow:0 0 5px #0ff; transition:all 0.3s; }
@@ -37,7 +38,7 @@ button { margin-top:10px; padding:10px 20px; border-radius:14px; border:none; fo
 button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
 /* GRID & ENERGY */
-#gridWrapper { display:inline-block; position:relative; margin-top:100px; } /* space for controls */
+#gridWrapper { display:inline-block; position:relative; margin-top:100px; }
 .grid { display:grid; grid-gap:2px; position: relative; z-index:2; }
 .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
 .blue { background:#007bff; }
@@ -67,15 +68,14 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
 <!-- AUDIO -->
 <audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
-<audio id="clickSound" src="https://dl.dropboxusercontent.com/s/7z2ieaxbqkrs3yd/click-sound.mp3" preload="auto"></audio>
-<audio id="winSound" src="https://dl.dropboxusercontent.com/s/kdm8jkx8y8hm5gk/applause-cheer.mp3" loop preload="auto"></audio>
+<audio id="clickSound" src="https://www.soundjay.com/button/sounds/button-16.mp3" preload="auto"></audio>
+<audio id="winSound" src="https://www.soundjay.com/human/sounds/applause-8.mp3" loop preload="auto"></audio>
 
-<!-- CONTROLS -->
 <div id="controls">
   <button id="muteBtn" onclick="toggleMusic()">Mute</button>
   <div class="volume-control">
     <label>Music <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.5"></label>
-    <label>Click <input type="range" id="clickVolume" min="0" max="1" step="0.01" value="0.5"></label>
+    <label>Sound FX <input type="range" id="clickVolume" min="0" max="1" step="0.01" value="0.5"></label>
   </div>
 </div>
 
@@ -129,7 +129,8 @@ function createGrid(){
   player=1;
   winner=null;
   winningPath=[];
-  if(winInterval){ clearInterval(winInterval); winInterval=null; winSound.pause(); winSound.currentTime=0; }
+  if(winInterval){ clearInterval(winInterval); winInterval=null; }
+  winSound.pause(); winSound.currentTime=0;
   const gridEl=document.getElementById('grid');
   if(gridEl) for(let cell of gridEl.children){ cell.className='cell'; cell.style.animation=''; }
 }
@@ -208,7 +209,7 @@ function animateWinningPath(){
   let i=0;
   if(winInterval) clearInterval(winInterval);
   winInterval=setInterval(()=>{
-    if(i>=winningPath.length){ return; }
+    if(i>=winningPath.length) return;
     const [r,c]=winningPath[i];
     const gridEl=document.getElementById('grid');
     const cell=gridEl.children[r*GRID_SIZE+c];
