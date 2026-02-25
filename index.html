@@ -173,14 +173,14 @@ function handleClick(r,c){
   renderGrid(); updateTurnText();
 }
 
-// AI moves with upgraded difficulty
+// AI moves with improved difficulty scaling
 function aiMove(){
   if(winner) return;
   let move;
   if(difficulty <= 3){ move = randomMove(); }
-  else if(difficulty <= 6){ move = findWinningMove(2) || findWinningMove(1) || findBestMove(2,2) || randomMove(); }
-  else if(difficulty <= 9){ move = findWinningMove(2) || findWinningMove(1) || findBestMove(2,5) || randomMove(); }
-  else { move = findWinningMove(2) || findWinningMove(1) || findBestMove(2,20) || randomMove(); } // 10 unbeatable
+  else if(difficulty <= 6){ move = findBestMoveAI(2,false); }
+  else if(difficulty <= 9){ move = findBestMoveAI(2,true,false); }
+  else { move = findBestMoveAI(2,true,true); } // 10 unbeatable
   const [r,c]=move;
   grid[r][c]=2;
   if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
@@ -188,42 +188,37 @@ function aiMove(){
   renderGrid(); updateTurnText();
 }
 
-// Find immediate winning move
-function findWinningMove(p){
-  for(let r=0;r<GRID_SIZE;r++){
-    for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]===0){ grid[r][c]=p; if(checkWin(p)){ grid[r][c]=0; return [r,c]; } grid[r][c]=0; }
-    }
-  }
-  return null;
-}
-
-// Smart move scoring for higher difficulties
-function findBestMove(p, weight=5){
-  let best=null,score=-Infinity;
-  for(let r=0;r<GRID_SIZE;r++){
-    for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]===0){
-        let s=0;
-        // center preference
-        s+=4-Math.abs(r-(GRID_SIZE/2)) + 4-Math.abs(c-(GRID_SIZE/2));
-        // neighbor connection bonus
-        const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-        for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=weight; }
-        // blocking opponent slightly
-        const opp=3-p;
-        for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===opp) s+=weight/2; }
-        if(s>score){ score=s; best=[r,c]; }
-      }
-    }
-  }
-  return best;
-}
-
+// returns random empty cell
 function randomMove(){
   const empty=[];
   for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===0) empty.push([r,c]);
   return empty[Math.floor(Math.random()*empty.length)];
+}
+
+// finds winning moves or strategic moves
+function findBestMoveAI(p,strong=false,perfect=false){
+  let best=null,score=-Infinity;
+  const opp=3-p;
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE;c++){
+      if(grid[r][c]===0){
+        let s=0;
+        grid[r][c]=p;
+        if(checkWin(p)){ s+=1000; } // win immediately
+        grid[r][c]=opp;
+        if(checkWin(opp)){ s+=900; } // block opponent
+        grid[r][c]=0;
+        // add connectivity bonus if strong/human-like AI
+        if(strong){
+          const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+          for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=strong?5:1; }
+          if(!perfect && Math.random()<0.15) s-=10; // small imperfection for 7-9
+        }
+        if(s>score){ score=s; best=[r,c]; }
+      }
+    }
+  }
+  return best||randomMove();
 }
 
 function glowWinningTiles(p){
