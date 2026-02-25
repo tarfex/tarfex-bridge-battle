@@ -46,6 +46,18 @@ body {
 .blue { background:#007bff; }
 .red { background:#ff3333; }
 
+/* Neon glow animations */
+@keyframes neonBlue {
+  0% { box-shadow: 0 0 5px #007bff; }
+  50% { box-shadow: 0 0 20px #00f; }
+  100% { box-shadow: 0 0 5px #007bff; }
+}
+@keyframes neonRed {
+  0% { box-shadow: 0 0 5px #ff3333; }
+  50% { box-shadow: 0 0 20px #f00; }
+  100% { box-shadow: 0 0 5px #ff3333; }
+}
+
 /* Goal borders */
 #gridWrapper::before, #gridWrapper::after { 
   content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; z-index:1; 
@@ -197,11 +209,25 @@ function handleClick(r,c){
   if(checkWin(player)){
     winner = player;
     document.getElementById('winnerText').innerText = `Player ${player} Wins!`;
+    glowWinningTiles(player);
   } else {
     player = player === 1 ? 2 : 1;
   }
   renderGrid();
   updateTurnText();
+}
+
+// Glow winning tiles without interfering with reset
+function glowWinningTiles(p){
+  const gridEl = document.getElementById('grid');
+  for(let r=0;r<GRID_SIZE;r++){
+    for(let c=0;c<GRID_SIZE;c++){
+      if(grid[r][c]===p){
+        const cell = gridEl.children[r*GRID_SIZE+c];
+        cell.style.animation = p===1 ? 'neonBlue 1s infinite alternate' : 'neonRed 1s infinite alternate';
+      }
+    }
+  }
 }
 
 function resetGame(){
