@@ -5,33 +5,19 @@
 <title>Tarfex Bridge Battle</title>
 <style>
 body { 
-  margin:0; 
-  display:flex; 
-  flex-direction:column; 
-  justify-content:center; 
-  align-items:center; 
-  height:100vh; 
-  background:black; 
-  color:white; 
-  font-family:sans-serif; 
-  position:relative;
-  overflow:hidden;
+  margin:0; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; 
+  background:black; color:white; font-family:sans-serif; position:relative; overflow:hidden;
 }
 
-/* MUTE BUTTON */
-#muteBtn {
-  position:fixed; top:10px; right:10px;
-  padding:8px 14px; border:none; border-radius:12px;
-  background:#0ff; color:black; font-weight:bold; cursor:pointer;
-  box-shadow:0 0 10px #0ff,0 0 20px #0ff,0 0 30px #00f; text-shadow:0 0 5px #0ff;
-  transition:all 0.3s; z-index:100;
-}
+/* CONTROLS ABOVE GRID */
+#controls { display:flex; flex-direction:column; align-items:center; margin-bottom:20px; z-index:100; }
+#muteBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black; font-weight:bold; cursor:pointer;
+  box-shadow:0 0 10px #0ff,0 0 20px #0ff,0 0 30px #00f; text-shadow:0 0 5px #0ff; transition:all 0.3s; }
 #muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #0ff,0 0 40px #0ff,0 0 50px #00f; }
 
-/* VOLUME SLIDERS */
-.volume-control { position: fixed; top:60px; right:10px; display:flex; flex-direction:column; gap:8px; z-index:100; font-size:12px; color:#0ff; }
-.volume-control label { display:flex; justify-content:space-between; width:140px; text-shadow:0 0 4px #0ff; }
-.volume-control input[type=range] { -webkit-appearance:none; width:140px; height:8px; border-radius:5px; background:#111; box-shadow:0 0 5px #0ff inset; cursor:pointer; }
+.volume-control { display:flex; flex-direction:column; gap:8px; font-size:12px; color:#0ff; text-align:center; }
+.volume-control label { display:flex; justify-content:space-between; width:160px; text-shadow:0 0 4px #0ff; margin:0 auto; }
+.volume-control input[type=range] { -webkit-appearance:none; width:160px; height:8px; border-radius:5px; background:#111; box-shadow:0 0 5px #0ff inset; cursor:pointer; }
 .volume-control input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#0ff; box-shadow:0 0 8px #0ff,0 0 12px #0ff; }
 .volume-control input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:#0ff; box-shadow:0 0 8px #0ff,0 0 12px #0ff; }
 
@@ -46,7 +32,7 @@ body {
 button { margin-top:10px; padding:10px 20px; border-radius:14px; border:none; font-size:16px; cursor:pointer; background:#0ff; color:black; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
 button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
-/* GRID & ENERGY BACKGROUND */
+/* GRID & ENERGY */
 #gridWrapper { display:inline-block; position:relative; margin-top:20px; }
 .grid { display:grid; grid-gap:2px; position: relative; z-index:2; }
 .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
@@ -75,14 +61,18 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
 <div id="energyFlow"></div>
 
+<!-- AUDIO -->
 <audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
 <audio id="clickSound" src="https://www.orangefreesounds.com/wp-content/uploads/2014/08/Mouse-click-1.mp3" preload="auto"></audio>
+<audio id="winSound" src="https://www.orangefreesounds.com/wp-content/uploads/2019/10/Applause-clapping-1.mp3" preload="auto"></audio>
 
-<button id="muteBtn" onclick="toggleMusic()">Mute</button>
-
-<div class="volume-control">
-  <label>Music <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.5"></label>
-  <label>Click <input type="range" id="clickVolume" min="0" max="1" step="0.01" value="0.5"></label>
+<!-- CONTROLS -->
+<div id="controls">
+  <button id="muteBtn" onclick="toggleMusic()">Mute</button>
+  <div class="volume-control">
+    <label>Music <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.5"></label>
+    <label>Click <input type="range" id="clickVolume" min="0" max="1" step="0.01" value="0.5"></label>
+  </div>
 </div>
 
 <div id="startScreen" class="start-screen">
@@ -105,10 +95,10 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
 <script>
 const GRID_SIZE=8;
-let grid=[],player=1,winner=null,winningPath=[];
+let grid=[],player=1,winner=null,winningPath=[],winInterval=null;
 const music=document.getElementById('bgMusic');
 const clickSound=document.getElementById('clickSound');
-const muteBtn=document.getElementById('muteBtn');
+const winSound=document.getElementById('winSound');
 const musicVolume=document.getElementById('musicVolume');
 const clickVolume=document.getElementById('clickVolume');
 
@@ -124,7 +114,9 @@ function startGame(){
 
 function toggleMusic(){ if(music.paused){ music.play(); muteBtn.innerText='Mute'; } else { music.pause(); muteBtn.innerText='Unmute'; } }
 function playClick(){ clickSound.currentTime=0; clickSound.play(); }
-function createGrid(){ grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); winningPath=[]; }
+
+function createGrid(){ grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); winningPath=[]; if(winInterval){ clearInterval(winInterval); winInterval=null; } }
+
 function renderGrid(){
   const gridEl=document.getElementById('grid'); gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`; gridEl.innerHTML='';
   for(let r=0;r<GRID_SIZE;r++){ for(let c=0;c<GRID_SIZE;c++){
@@ -142,10 +134,11 @@ function renderGrid(){
 }
 
 function handleClick(r,c){ if(grid[r][c]||winner) return; grid[r][c]=player;
-if(checkWin(player)){ winner=player; document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`; animateWinningPath(); }
+if(checkWin(player)){ winner=player; document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`; winSound.play(); animateWinningPath(); }
 else{ player=player===1?2:1; updateTurnText(); } renderGrid(); }
 
 function updateTurnText(){ document.getElementById('turnText').innerText=`Player ${player}'s Turn`; }
+
 function resetGame(){ createGrid(); player=1; winner=null; winningPath=[]; document.getElementById('winnerText').innerText=''; updateTurnText(); renderGrid(); }
 
 function checkWin(p){ const visited=new Set(); let found=false;
@@ -162,8 +155,10 @@ function checkWin(p){ const visited=new Set(); let found=false;
   return found;
 }
 
-function animateWinningPath(){ let i=0;
-  const interval=setInterval(()=>{ if(i>=winningPath.length){ clearInterval(interval); return; }
+function animateWinningPath(){ let i=0; 
+  if(winInterval) clearInterval(winInterval);
+  winInterval=setInterval(()=>{
+    if(i>=winningPath.length){ clearInterval(winInterval); winInterval=null; return; }
     const [r,c]=winningPath[i]; const gridEl=document.getElementById('grid'); const cell=gridEl.children[r*GRID_SIZE+c];
     cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
     if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
