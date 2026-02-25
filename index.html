@@ -12,7 +12,7 @@ body {
 
 /* CONTROLS AT TOP */
 #controls {
-  display:flex; flex-direction:column; align-items:center; margin:20px 0; gap:10px;
+  display:flex; flex-direction:column; align-items:center; margin:60px 0 0 0; gap:10px; /* pushed down from top */
   position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:200;
 }
 #muteBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black;
@@ -67,8 +67,8 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 
 <!-- AUDIO -->
 <audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
-<audio id="clickSound" src="https://www.orangefreesounds.com/wp-content/uploads/2014/08/Mouse-click-1.mp3" preload="auto"></audio>
-<audio id="winSound" src="https://www.orangefreesounds.com/wp-content/uploads/2019/10/Applause-clapping-1.mp3" preload="auto"></audio>
+<audio id="clickSound" src="https://dl.dropboxusercontent.com/s/7z2ieaxbqkrs3yd/click-sound.mp3" preload="auto"></audio>
+<audio id="winSound" src="https://dl.dropboxusercontent.com/s/kdm8jkx8y8hm5gk/applause-cheer.mp3" loop preload="auto"></audio>
 
 <!-- CONTROLS -->
 <div id="controls">
@@ -87,19 +87,20 @@ button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
 </div>
 
 <div id="game" style="display:none;">
-  <h2 id="turnText"></h2>
+  <h2 id="turnText" style="text-align:center; margin-top:20px;"></h2>
   <div id="gridWrapper">
     <div class="leftGoal"></div>
     <div class="rightGoal"></div>
     <div id="grid" class="grid"></div>
   </div>
-  <div id="winnerText" style="margin-top:10px;"></div>
-  <button onclick="resetGame()">Reset Game</button>
+  <div id="winnerText" style="margin-top:10px; text-align:center;"></div>
+  <button onclick="resetGame()" style="margin-top:10px;">Reset Game</button>
 </div>
 
 <script>
 const GRID_SIZE=8;
 let grid=[],player=1,winner=null,winningPath=[],winInterval=null;
+
 const music=document.getElementById('bgMusic');
 const clickSound=document.getElementById('clickSound');
 const winSound=document.getElementById('winSound');
@@ -116,79 +117,86 @@ function startGame(){
   createGrid(); renderGrid(); updateTurnText();
 }
 
-function toggleMusic(){ if(music.paused){ music.play(); muteBtn.innerText='Mute'; } else { music.pause(); muteBtn.innerText='Unmute'; } }
+function toggleMusic(){
+  if(music.paused){ music.play(); muteBtn.innerText='Mute'; }
+  else { music.pause(); muteBtn.innerText='Unmute'; }
+}
+
 function playClick(){ clickSound.currentTime=0; clickSound.play(); }
 
-function createGrid(){ 
-  grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); 
-  winningPath=[]; 
-  if(winInterval){ clearInterval(winInterval); winInterval=null; } 
-  // clear all cell animations
+function createGrid(){
+  grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
+  player=1;
+  winner=null;
+  winningPath=[];
+  if(winInterval){ clearInterval(winInterval); winInterval=null; winSound.pause(); winSound.currentTime=0; }
   const gridEl=document.getElementById('grid');
-  if(gridEl) for(let cell of gridEl.children){ cell.className='cell'; cell.style.animation=''; } 
+  if(gridEl) for(let cell of gridEl.children){ cell.className='cell'; cell.style.animation=''; }
 }
 
 function renderGrid(){
-  const gridEl=document.getElementById('grid'); 
-  gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`; 
+  const gridEl=document.getElementById('grid');
+  gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`;
   gridEl.innerHTML='';
-  for(let r=0;r<GRID_SIZE;r++){ 
+  for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
-      const cell=document.createElement('div'); cell.classList.add('cell');
+      const cell=document.createElement('div'); 
+      cell.classList.add('cell');
       if(grid[r][c]===1) cell.classList.add('blue');
       if(grid[r][c]===2) cell.classList.add('red');
       if(winningPath.some(pos=>pos[0]===r && pos[1]===c)){
         cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
         if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
         else cell.style.animation='pulseWinRed 1.2s infinite';
-      } 
+      }
       cell.onclick=()=>{ playClick(); handleClick(r,c); };
       gridEl.appendChild(cell);
     }
   }
 }
 
-function handleClick(r,c){ 
-  if(grid[r][c]||winner) return; 
+function updateTurnText(){ 
+  document.getElementById('turnText').innerText=`Player ${player}'s Turn`; 
+}
+
+function handleClick(r,c){
+  if(grid[r][c]||winner) return;
   grid[r][c]=player;
-  if(checkWin(player)){ 
-    winner=player; 
-    document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`; 
+  if(checkWin(player)){
+    winner=player;
+    document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`;
     winSound.currentTime=0; winSound.play();
-    animateWinningPath(); 
-  } else { 
-    player=player===1?2:1; 
-    updateTurnText(); 
-  } 
-  renderGrid(); 
+    animateWinningPath();
+  } else {
+    player=player===1?2:1;
+    updateTurnText();
+  }
+  renderGrid();
 }
 
-function updateTurnText(){ document.getElementById('turnText').innerText=`Player ${player}'s Turn`; }
-
-function resetGame(){ 
-  createGrid(); 
-  player=1; winner=null; winningPath=[]; 
-  document.getElementById('winnerText').innerText=''; 
-  updateTurnText(); 
-  renderGrid(); 
+function resetGame(){
+  createGrid();
+  updateTurnText();
+  document.getElementById('winnerText').innerText='';
+  renderGrid();
 }
 
-function checkWin(p){ 
-  const visited=new Set(); 
+function checkWin(p){
+  const visited=new Set();
   let found=false;
-  function dfs(r,c){ 
-    const key=r+'-'+c; 
-    if(visited.has(key)) return false; 
+  function dfs(r,c){
+    const key=r+'-'+c;
+    if(visited.has(key)) return false;
     visited.add(key);
     if(p===1 && r===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
     if(p===2 && c===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
     const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-    for(let [dr,dc] of dirs){ 
+    for(let [dr,dc] of dirs){
       let nr=r+dr,nc=c+dc;
-      if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){ 
-        if(dfs(nr,nc)){ winningPath.push([r,c]); return true; } 
+      if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){
+        if(dfs(nr,nc)){ winningPath.push([r,c]); return true; }
       }
-    } 
+    }
     return false;
   }
   if(p===1){ for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break; }
@@ -196,13 +204,13 @@ function checkWin(p){
   return found;
 }
 
-function animateWinningPath(){ 
-  let i=0; 
+function animateWinningPath(){
+  let i=0;
   if(winInterval) clearInterval(winInterval);
   winInterval=setInterval(()=>{
-    if(i>=winningPath.length){ clearInterval(winInterval); winInterval=null; return; }
-    const [r,c]=winningPath[i]; 
-    const gridEl=document.getElementById('grid'); 
+    if(i>=winningPath.length){ return; }
+    const [r,c]=winningPath[i];
+    const gridEl=document.getElementById('grid');
     const cell=gridEl.children[r*GRID_SIZE+c];
     cell.classList.add(grid[r][c]===1?'energyBlue':'energyRed');
     if(grid[r][c]===1) cell.style.animation='pulseWinBlue 1.2s infinite';
