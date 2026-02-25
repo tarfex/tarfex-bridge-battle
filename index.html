@@ -36,14 +36,48 @@
   #muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #00f,0 0 40px #0ff; }
 
   /* START SCREEN */
-  .start-screen { text-align:center; animation: fadeIn 1s ease forwards; }
-  .start-screen img { max-width:320px; margin-bottom:10px; border-radius:12px; box-shadow:0 0 20px #00f,0 0 40px #0ff; animation: pulseCar 2s infinite alternate; }
-  @keyframes pulseCar { 0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} }
+  .start-screen { 
+    text-align:center; 
+    animation: fadeIn 1s ease forwards; 
+    display:flex; 
+    flex-direction:column; 
+    align-items:center; 
+    justify-content:center;
+  }
+
+  .start-screen img {
+    max-width: 90vw;   /* scale with viewport width */
+    max-height: 40vh;  /* limit height so it doesn’t push content off-screen */
+    width: auto;
+    height: auto;
+    margin-bottom:10px;
+    border-radius:12px;
+    box-shadow:0 0 20px #00f,0 0 40px #0ff;
+    animation: pulseCar 2s infinite alternate;
+  }
+
+  @keyframes pulseCar { 
+    0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 
+    100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} 
+  }
+
   @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+
   .start-screen h1 { font-size:2em; margin-bottom:5px; text-shadow:0 0 6px cyan; }
   .start-screen p { font-style:italic; font-size:1em; color:#0ff; margin-bottom:15px; text-shadow:0 0 4px #0ff; }
 
-  button { margin-top:10px; padding:10px 20px; border-radius:14px; border:none; font-size:16px; cursor:pointer; background:#00f; color:white; box-shadow:0 0 10px #00f,0 0 20px #0ff; transition:all 0.3s; }
+  button { 
+    margin-top:10px; 
+    padding:10px 20px; 
+    border-radius:14px; 
+    border:none; 
+    font-size:16px; 
+    cursor:pointer; 
+    background:#00f; 
+    color:white; 
+    box-shadow:0 0 10px #00f,0 0 20px #0ff; 
+    transition:all 0.3s; 
+  }
   button:hover { box-shadow:0 0 20px #00f,0 0 40px #0ff; transform:scale(1.05); }
 
   /* GRID & WRAPPER */
@@ -76,7 +110,7 @@
 
 <!-- START SCREEN -->
 <div id="startScreen" class="start-screen">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/1/18/Ford_Mustang_Mach-E_2021_IMG_0034.jpg" alt="Mustang Mach-E">
+  <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
   <p>Inspired by the Ford Mustang Mach-E<br>Music: Ambient Voyager by Zeropage (CC BY 3.0)</p>
   <button onclick="startGame()">Start Game</button>
