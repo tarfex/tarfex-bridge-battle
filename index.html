@@ -5,189 +5,208 @@
 <title>Tarfex Bridge Battle</title>
 <style>
 body {
-  margin:0; padding:0;
-  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
-  height:100vh; background:black; color:white; font-family:sans-serif; overflow:hidden;
+  margin:0;
+  font-family:sans-serif;
+  background:black;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  overflow:hidden;
 }
 
-/* CONTROLS AT BOTTOM */
-#controls {
-  display:flex; justify-content:center; align-items:center; gap:10px;
-  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-  z-index:200;
+/* Top player turn */
+#turnText {
+  margin-top:20px;
+  font-size:1.5em;
+  text-align:center;
 }
-#muteBtn {
-  padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black;
-  font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; text-shadow:0 0 5px #0ff; transition:all 0.3s;
-}
-#muteBtn:hover { transform:scale(1.1); box-shadow:0 0 20px #0ff,0 0 40px #0ff; }
 
-/* START SCREEN */
-.start-screen {
-  text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; animation: fadeIn 1s ease forwards;
+/* Grid wrapper and cells */
+#gridWrapper {
+  display:inline-block;
+  position:relative;
+  margin-top:40px;
 }
-.start-screen img {
-  max-width:90vw; max-height:40vh; margin-bottom:10px; border-radius:12px; box-shadow:0 0 20px #00f,0 0 40px #0ff; animation:pulseCar 2s infinite alternate;
+.grid {
+  display:grid;
+  grid-gap:2px;
 }
-@keyframes pulseCar { 0% {transform: scale(1); box-shadow:0 0 10px #00f,0 0 20px #0ff;} 100% {transform: scale(1.05); box-shadow:0 0 20px #00f,0 0 40px #0ff;} }
-@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-.start-screen h1 { font-size:2em; margin-bottom:5px; text-shadow:0 0 6px cyan; }
-.start-screen p { font-style:italic; font-size:1em; color:#0ff; margin-bottom:15px; text-shadow:0 0 4px #0ff; }
-
-button { margin-top:10px; padding:10px 20px; border-radius:14px; border:none; font-size:16px; cursor:pointer; background:#0ff; color:black; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
-button:hover { box-shadow:0 0 20px #0ff,0 0 40px #0ff; transform:scale(1.05); }
-
-/* GRID & ENERGY */
-#gridWrapper { display:inline-block; position:relative; margin-top:100px; }
-.grid { display:grid; grid-gap:2px; position: relative; z-index:2; }
-.cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.cell {
+  width:40px;
+  height:40px;
+  border:1px solid #555;
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.2s;
+}
 .blue { background:#007bff; }
 .red { background:#ff3333; }
 
-#gridWrapper::before, #gridWrapper::after { content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; z-index:1; }
+/* Goal borders */
+#gridWrapper::before, #gridWrapper::after { 
+  content:''; position:absolute; left:0; width:100%; height:8px; background:#007bff; z-index:1; 
+}
 #gridWrapper::before { top:-8px; border-radius:4px 4px 0 0; }
 #gridWrapper::after { bottom:-8px; border-radius:0 0 4px 4px; }
 #gridWrapper .leftGoal, #gridWrapper .rightGoal { position:absolute; top:0; width:8px; height:100%; z-index:1; }
 #gridWrapper .leftGoal { left:-8px; background:#ff3333; border-radius:4px 0 0 4px; }
 #gridWrapper .rightGoal { right:-8px; background:#ff3333; border-radius:0 4px 4px 0; }
 
-/* ENERGY FLOW BACKGROUND */
-#energyFlow { position:absolute; width:100%; height:100%; top:0; left:0; background:repeating-linear-gradient(45deg, rgba(0,255,255,0.05) 0, rgba(0,255,255,0.05) 2px, transparent 2px, transparent 8px); z-index:0; animation: flow 2s linear infinite; }
-@keyframes flow { 0% {background-position:0 0;} 100% {background-position:100px 100px;} }
+/* Bottom controls */
+#controls {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:200;
+}
+#muteBtn, #resetBtn {
+  padding:8px 14px;
+  border:none;
+  border-radius:12px;
+  background:#0ff;
+  color:black;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 10px #0ff,0 0 20px #0ff;
+}
+#muteBtn:hover, #resetBtn:hover { transform:scale(1.05); }
+
+/* Start screen */
+.start-screen {
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:black;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  color:#0ff;
+}
+.start-screen img {
+  max-width:90vw;
+  max-height:40vh;
+  margin-bottom:10px;
+}
+.start-screen button {
+  margin-top:20px;
+}
 </style>
 </head>
 <body>
 
-<div id="energyFlow"></div>
-
-<!-- BACKGROUND MUSIC -->
-<audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
-
-<div id="controls">
-  <button id="muteBtn" onclick="toggleMusic()">Mute</button>
-</div>
-
-<div id="startScreen" class="start-screen">
+<div class="start-screen" id="startScreen">
   <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
-  <p>Inspired by the Ford Mustang Mach-E<br>Music: Ambient Voyager by Zeropage (CC BY 3.0)</p>
+  <p>Inspired by the Ford Mustang Mach-E</p>
   <button onclick="startGame()">Start Game</button>
 </div>
 
-<div id="game" style="display:none;">
-  <h2 id="turnText" style="text-align:center; margin-top:20px;"></h2>
-  <div id="gridWrapper">
-    <div class="leftGoal"></div>
-    <div class="rightGoal"></div>
-    <div id="grid" class="grid"></div>
-  </div>
-  <div id="winnerText" style="margin-top:10px; text-align:center;"></div>
-  <button onclick="resetGame()" style="margin-top:10px;">Reset Game</button>
+<h2 id="turnText"></h2>
+
+<div id="gridWrapper">
+  <div class="leftGoal"></div>
+  <div class="rightGoal"></div>
+  <div id="grid" class="grid"></div>
+</div>
+
+<div id="winnerText" style="margin-top:10px; text-align:center;"></div>
+
+<div id="controls">
+  <button id="resetBtn" onclick="resetGame()">Reset Game</button>
 </div>
 
 <script>
-const GRID_SIZE=8;
-let grid=[],player=1,winner=null,winningPath=[],winInterval=null;
-
-const music=document.getElementById('bgMusic');
+const GRID_SIZE = 8;
+let grid = [];
+let player = 1;
+let winner = null;
 
 function startGame(){
   document.getElementById('startScreen').style.display='none';
-  document.getElementById('game').style.display='block';
-  music.play().catch(e=>console.log("Autoplay blocked"));
-  createGrid(); renderGrid(); updateTurnText();
-}
-
-function toggleMusic(){
-  if(music.paused){ music.play(); muteBtn.innerText='Mute'; }
-  else { music.pause(); muteBtn.innerText='Unmute'; }
+  createGrid();
+  renderGrid();
+  updateTurnText();
 }
 
 function createGrid(){
-  grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
-  player=1;
-  winner=null;
-  winningPath=[];
-  if(winInterval){ clearInterval(winInterval); winInterval=null; }
-  const gridEl=document.getElementById('grid');
-  if(gridEl) for(let cell of gridEl.children){ cell.className='cell'; cell.style.animation=''; }
+  grid = Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0));
+  player = 1;
+  winner = null;
+  document.getElementById('winnerText').innerText = '';
 }
 
 function renderGrid(){
-  const gridEl=document.getElementById('grid');
-  gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`;
-  gridEl.innerHTML='';
+  const gridEl = document.getElementById('grid');
+  gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE},40px)`;
+  gridEl.innerHTML = '';
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
-      const cell=document.createElement('div'); 
+      const cell = document.createElement('div');
       cell.classList.add('cell');
       if(grid[r][c]===1) cell.classList.add('blue');
       if(grid[r][c]===2) cell.classList.add('red');
-      cell.onclick=()=>handleClick(r,c);
+      cell.addEventListener('click', ()=> handleClick(r,c));
       gridEl.appendChild(cell);
     }
   }
 }
 
-function updateTurnText(){ 
-  document.getElementById('turnText').innerText=`Player ${player}'s Turn`; 
+function updateTurnText(){
+  document.getElementById('turnText').innerText = winner ? '' : `Player ${player}'s Turn`;
 }
 
 function handleClick(r,c){
-  if(grid[r][c]||winner) return;
-  grid[r][c]=player;
+  if(grid[r][c] !== 0 || winner) return;
+  grid[r][c] = player;
   if(checkWin(player)){
-    winner=player;
-    document.getElementById('winnerText').innerText=`Player ${player} Wins ⚡`;
-    animateWinningPath();
+    winner = player;
+    document.getElementById('winnerText').innerText = `Player ${player} Wins!`;
   } else {
-    player=player===1?2:1;
-    updateTurnText();
+    player = player === 1 ? 2 : 1;
   }
   renderGrid();
+  updateTurnText();
 }
 
 function resetGame(){
   createGrid();
-  updateTurnText();
-  document.getElementById('winnerText').innerText='';
   renderGrid();
+  updateTurnText();
 }
 
 function checkWin(p){
-  const visited=new Set();
-  let found=false;
+  // Simple DFS to find path from top-left or left to bottom-right or right
+  const visited = new Set();
+  let found = false;
   function dfs(r,c){
-    const key=r+'-'+c;
+    const key = r+'-'+c;
     if(visited.has(key)) return false;
     visited.add(key);
-    if(p===1 && r===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
-    if(p===2 && c===GRID_SIZE-1){ winningPath.push([r,c]); found=true; return true; }
+    if(p===1 && r===GRID_SIZE-1){ found=true; return true; }
+    if(p===2 && c===GRID_SIZE-1){ found=true; return true; }
     const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-    for(let [dr,dc] of dirs){
-      let nr=r+dr,nc=c+dc;
+    for(const [dr,dc] of dirs){
+      const nr = r+dr, nc = c+dc;
       if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){
-        if(dfs(nr,nc)){ winningPath.push([r,c]); return true; }
+        if(dfs(nr,nc)) return true;
       }
     }
     return false;
   }
   if(p===1){ for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break; }
-  else{ for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) break; }
+  if(p===2){ for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) break; }
   return found;
-}
-
-function animateWinningPath(){
-  let i=0;
-  if(winInterval) clearInterval(winInterval);
-  winInterval=setInterval(()=>{
-    if(i>=winningPath.length){ clearInterval(winInterval); return; }
-    const [r,c]=winningPath[i];
-    const gridEl=document.getElementById('grid');
-    const cell=gridEl.children[r*GRID_SIZE+c];
-    cell.style.animation='pulseWinBlue 1.2s infinite';
-    i++;
-  },150);
 }
 </script>
 </body>
