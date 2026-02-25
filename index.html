@@ -92,16 +92,9 @@ body {
   </select>
   <label for="difficultySelect" style="margin-top:10px;">Computer Difficulty:</label>
   <select id="difficultySelect">
-    <option value="1">1 - Easiest</option>
-    <option value="2">2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-    <option value="5">5 - Medium</option>
-    <option value="6">6</option>
-    <option value="7">7</option>
-    <option value="8">8</option>
-    <option value="9">9</option>
-    <option value="10">10 - Unbeatable</option>
+    <option value="1">Easy</option>
+    <option value="2">Medium</option>
+    <option value="3">Hard</option>
   </select>
   <button id="startGameBtn" onclick="startGame()">Start Game</button>
 </div>
@@ -113,7 +106,7 @@ body {
     <li>Player 1 (Blue): top to bottom</li>
     <li>Player 2 (Red): left to right</li>
   </ul>
-  <p>Two Players or vs Computer (select difficulty 1-10). Reset anytime. Mute background music if needed.</p>
+  <p>Two Players or vs Computer. Reset anytime. Mute background music if needed.</p>
 </div>
 
 <div id="gameArea">
@@ -132,7 +125,7 @@ body {
 
 <script>
 const GRID_SIZE=8;
-let grid=[],player=1,winner=null,vsAI=false,difficulty=5;
+let grid=[],player=1,winner=null,vsAI=false,difficulty=2;
 const music=document.getElementById('bgMusic');
 
 function startGame(){
@@ -173,14 +166,13 @@ function handleClick(r,c){
   renderGrid(); updateTurnText();
 }
 
-// AI moves with improved difficulty scaling
+// AI move logic simplified for 3 levels
 function aiMove(){
   if(winner) return;
   let move;
-  if(difficulty <= 3){ move = randomMove(); }
-  else if(difficulty <= 6){ move = findBestMoveAI(2,false); }
-  else if(difficulty <= 9){ move = findBestMoveAI(2,true,false); }
-  else { move = findBestMoveAI(2,true,true); } // 10 unbeatable
+  if(difficulty===1){ move=randomMove(); } // Easy
+  else if(difficulty===2){ move=findBestMoveAI(2,false); } // Medium
+  else{ move=findBestMoveAI(2,true); } // Hard
   const [r,c]=move;
   grid[r][c]=2;
   if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
@@ -188,31 +180,26 @@ function aiMove(){
   renderGrid(); updateTurnText();
 }
 
-// returns random empty cell
 function randomMove(){
   const empty=[];
   for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===0) empty.push([r,c]);
   return empty[Math.floor(Math.random()*empty.length)];
 }
 
-// finds winning moves or strategic moves
-function findBestMoveAI(p,strong=false,perfect=false){
+// AI scoring: blocks, extends path
+function findBestMoveAI(p,strong){
   let best=null,score=-Infinity;
   const opp=3-p;
   for(let r=0;r<GRID_SIZE;r++){
     for(let c=0;c<GRID_SIZE;c++){
       if(grid[r][c]===0){
         let s=0;
-        grid[r][c]=p;
-        if(checkWin(p)){ s+=1000; } // win immediately
-        grid[r][c]=opp;
-        if(checkWin(opp)){ s+=900; } // block opponent
+        grid[r][c]=p; if(checkWin(p)) s+=1000; // win immediately
+        grid[r][c]=opp; if(checkWin(opp)) s+=900; // block opponent
         grid[r][c]=0;
-        // add connectivity bonus if strong/human-like AI
-        if(strong){
+        if(strong){ // Hard AI
           const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-          for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=strong?5:1; }
-          if(!perfect && Math.random()<0.15) s-=10; // small imperfection for 7-9
+          for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) s+=5; }
         }
         if(s>score){ score=s; best=[r,c]; }
       }
