@@ -98,7 +98,7 @@ body {
     <option value="2">Medium</option>
     <option value="3">Hard</option>
   </select>
-  <button id="startGameBtn" onclick="startGame()">Start Game</button>
+  <button id="startGameBtn">Start Game</button>
 </div>
 
 <div id="instructions">
@@ -128,8 +128,8 @@ body {
   </div>
   <div id="winnerText" style="margin-top:10px; text-align:center;"></div>
   <div id="controls">
-    <button id="resetBtn" onclick="resetGame()">Reset Game</button>
-    <button id="muteBtn" onclick="toggleMusic()">Mute</button>
+    <button id="resetBtn">Reset Game</button>
+    <button id="muteBtn">Mute</button>
   </div>
 </div>
 
@@ -586,4 +586,6 @@ function virtualConnectionScore(p) {
         emptyNeighbours.add(`${nr}-${nc}`);
     }
     // Check each other own tile for shared empty neighbour
-    for (const [r2,
+    for (const [r2, c2] of ownTiles) {
+      if (r2 === r && c2 === c) continue;
+      
