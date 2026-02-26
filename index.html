@@ -4,202 +4,261 @@
 <meta charset="UTF-8">
 <title>Tarfex Bridge Battle</title>
 <style>
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
-  margin:0;
-  font-family:sans-serif;
-  background:black;
-  color:white;
-  display:flex;
-  flex-direction:row;
-  justify-content:center;
-  align-items:flex-start;
-  padding-top:40px;
-  overflow:hidden;
+  margin: 0;
+  font-family: sans-serif;
+  background: black;
+  color: white;
+}
+
+/* ── Full-screen start overlay ── */
+#startOverlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #0ff;
+  z-index: 999;
+}
+#startOverlay img { max-width: 90vw; max-height: 35vh; margin-bottom: 10px; }
+#startOverlay h1  { margin: 6px 0; }
+#startOverlay p   { margin: 4px 0; }
+#startOverlay select {
+  margin-top: 10px; padding: 8px 12px;
+  border-radius: 8px; font-weight: bold;
+}
+#startOverlay label { margin-top: 10px; }
+#startGameBtn {
+  margin-top: 20px; padding: 10px 24px;
+  border-radius: 12px; border: none;
+  background: #0ff; color: black;
+  font-weight: bold; font-size: 1em;
+  cursor: pointer;
+  box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+  transition: transform 0.2s;
+}
+#startGameBtn:hover { transform: scale(1.06); }
+
+/* ── Game layout ── */
+#gameLayout {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  gap: 20px;
 }
 
 #instructions {
-  width:280px;
-  margin-right:20px;
-  font-size:0.95em;
-  line-height:1.4em;
-  border:1px solid #0ff;
-  border-radius:12px;
-  padding:10px;
-  max-height:80vh;
-  overflow-y:auto;
+  width: 260px;
+  flex-shrink: 0;
+  font-size: 0.92em;
+  line-height: 1.5em;
+  border: 1px solid #0ff;
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 #gameArea {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-#turnText { margin-top:20px; font-size:1.5em; text-align:center; }
+#turnText { margin: 0 0 16px; font-size: 1.4em; text-align: center; min-height: 1.6em; }
 
 #gridWrapper {
-  display:inline-block;
-  position:relative;
-  margin-top:20px;
+  display: inline-block;
+  position: relative;
 }
-.grid { display:grid; grid-gap:2px; }
-.cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
-.blue { background:#007bff; }
-.red { background:#ff3333; }
-.win-path { background:#00cc44 !important; animation: neonGreen 1s infinite alternate !important; }
-@keyframes neonBlue { 0% { box-shadow:0 0 5px #007bff;} 50% { box-shadow:0 0 20px #00f;} 100% { box-shadow:0 0 5px #007bff;} }
-@keyframes neonRed { 0% { box-shadow:0 0 5px #ff3333;} 50% { box-shadow:0 0 20px #f00;} 100% { box-shadow:0 0 5px #ff3333;} }
-@keyframes neonGreen { 0% { box-shadow:0 0 6px #00cc44, 0 0 12px #00cc44;} 50% { box-shadow:0 0 18px #00ff55, 0 0 35px #00ff55;} 100% { box-shadow:0 0 6px #00cc44, 0 0 12px #00cc44;} }
 
-#gridWrapper::before,#gridWrapper::after{content:'';position:absolute;left:0;width:100%;height:8px;background:#007bff;z-index:1;}
-#gridWrapper::before{top:-8px;border-radius:4px 4px 0 0;}
-#gridWrapper::after{bottom:-8px;border-radius:0 0 4px 4px;}
-#gridWrapper .leftGoal,#gridWrapper .rightGoal{position:absolute;top:0;width:8px;height:100%;z-index:1;}
-#gridWrapper .leftGoal{left:-8px;background:#ff3333;border-radius:4px 0 0 4px;}
-#gridWrapper .rightGoal{right:-8px;background:#ff3333;border-radius:0 4px 4px 0;}
+.grid { display: grid; grid-gap: 2px; }
 
-#controls { display:flex; justify-content:center; align-items:center; gap:10px; margin-top:20px; }
-#muteBtn, #resetBtn, #startGameBtn { padding:8px 14px; border:none; border-radius:12px; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s; }
-#muteBtn:hover,#resetBtn:hover,#startGameBtn:hover{transform:scale(1.05);}
-
-.start-screen {
-  position:absolute;
-  width:100%;
-  height:100%;
-  background:black;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  color:#0ff;
+.cell {
+  width: 40px; height: 40px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
 }
-.start-screen img{ max-width:90vw; max-height:40vh; margin-bottom:10px;}
-.start-screen button{ margin-top:20px; padding:10px 20px; border-radius:12px; border:none; background:#0ff; color:black; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #0ff; transition:all 0.3s;}
-.start-screen button:hover{ transform:scale(1.05); box-shadow:0 0 20px #0ff,0 0 40px #0ff; }
-.start-screen select{ margin-top:10px; padding:8px 12px; border-radius:8px; font-weight:bold; }
+.cell:hover { border-color: #aaa; }
+.blue { background: #007bff; }
+.red  { background: #ff3333; }
+.win-path {
+  background: #00cc44 !important;
+  animation: neonGreen 1s infinite alternate !important;
+}
+
+@keyframes neonGreen {
+  0%   { box-shadow: 0 0 6px #00cc44, 0 0 12px #00cc44; }
+  50%  { box-shadow: 0 0 18px #00ff55, 0 0 35px #00ff55; }
+  100% { box-shadow: 0 0 6px #00cc44, 0 0 12px #00cc44; }
+}
+
+/* Grid border decorations */
+#gridWrapper::before, #gridWrapper::after {
+  content: ''; position: absolute; left: 0;
+  width: 100%; height: 8px; background: #007bff; z-index: 1;
+}
+#gridWrapper::before { top: -8px;    border-radius: 4px 4px 0 0; }
+#gridWrapper::after  { bottom: -8px; border-radius: 0 0 4px 4px; }
+.leftGoal, .rightGoal {
+  position: absolute; top: 0;
+  width: 8px; height: 100%; z-index: 1;
+}
+.leftGoal  { left: -8px;  background: #ff3333; border-radius: 4px 0 0 4px; }
+.rightGoal { right: -8px; background: #ff3333; border-radius: 0 4px 4px 0; }
+
+#winnerText {
+  margin-top: 14px;
+  font-size: 1.3em;
+  font-weight: bold;
+  min-height: 1.6em;
+  text-align: center;
+}
+
+#controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+#controls button {
+  padding: 8px 16px;
+  border: none; border-radius: 12px;
+  background: #0ff; color: black;
+  font-weight: bold; cursor: pointer;
+  box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+  transition: transform 0.2s;
+}
+#controls button:hover { transform: scale(1.05); }
 </style>
 </head>
 <body>
 
-<audio id="bgMusic" src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3" loop preload="auto"></audio>
+<audio id="bgMusic"
+  src="https://www.orangefreesounds.com/wp-content/uploads/2015/04/Ambient-voyager-chillout-music.mp3"
+  loop preload="auto"></audio>
 
-<div class="start-screen" id="startScreen">
-  <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach‑E">
+<!-- ── Start screen overlay ── -->
+<div id="startOverlay">
+  <img src="https://www.kindpng.com/picc/m/492-4926046_ford-mustang-mach-e-png-transparent-png.png" alt="Ford Mustang Mach-E">
   <h1>Welcome to Tarfex's Bridge Battle</h1>
   <p>Inspired by the Ford Mustang Mach-E</p>
+
   <select id="modeSelect">
     <option value="2p">Two Players</option>
     <option value="ai">Play vs Computer</option>
   </select>
-  <label for="difficultySelect" style="margin-top:10px;">Computer Difficulty:</label>
+
+  <label for="difficultySelect">Computer Difficulty:</label>
   <select id="difficultySelect">
     <option value="1">Easy</option>
     <option value="2">Medium</option>
     <option value="3">Hard</option>
   </select>
+
   <button id="startGameBtn">Start Game</button>
 </div>
 
-<div id="instructions">
-  <h3>Game Instructions</h3>
-  <p>Objective: Connect your side of the board to the opposite side using your color tiles.</p>
-  <ul>
-    <li>Player 1 (Blue): connect top to bottom</li>
-    <li>Player 2 (Red): connect left to right</li>
-  </ul>
-  <p>Gameplay:</p>
-  <ul>
-    <li>Click on an empty square to place your tile.</li>
-    <li>The first player to connect their goal sides wins.</li>
-    <li>Reset anytime using the Reset button.</li>
-    <li>Background music can be muted using the Mute button.</li>
-    <li>Play against a friend or challenge the computer at Easy, Medium, or Hard.</li>
-  </ul>
-
-</div>
-
-<div id="gameArea">
-  <h2 id="turnText"></h2>
-  <div id="gridWrapper">
-    <div class="leftGoal"></div>
-    <div class="rightGoal"></div>
-    <div id="grid" class="grid"></div>
+<!-- ── Game area ── -->
+<div id="gameLayout">
+  <div id="instructions">
+    <h3 style="margin-top:0">Game Instructions</h3>
+    <p>Connect your side of the board to the opposite side using your colour tiles.</p>
+    <ul>
+      <li><strong>Player 1 (Blue):</strong> connect top to bottom</li>
+      <li><strong>Player 2 (Red):</strong> connect left to right</li>
+    </ul>
+    <p><strong>Rules:</strong></p>
+    <ul>
+      <li>Click an empty square to place your tile.</li>
+      <li>Tiles only connect via flat sides — diagonals do not count.</li>
+      <li>First to complete a bridge wins. The winning path lights up green.</li>
+      <li>Reset anytime with the Reset button.</li>
+      <li>Toggle background music with the Mute button.</li>
+    </ul>
   </div>
-  <div id="winnerText" style="margin-top:10px; text-align:center;"></div>
-  <div id="controls">
-    <button id="resetBtn">Reset Game</button>
-    <button id="muteBtn">Mute</button>
+
+  <div id="gameArea">
+    <div id="turnText"></div>
+    <div id="gridWrapper">
+      <div class="leftGoal"></div>
+      <div class="rightGoal"></div>
+      <div id="grid" class="grid"></div>
+    </div>
+    <div id="winnerText"></div>
+    <div id="controls">
+      <button id="resetBtn">Reset Game</button>
+      <button id="muteBtn">Mute</button>
+    </div>
   </div>
 </div>
 
 <script>
 const GRID_SIZE = 8;
 let grid = [], player = 1, winner = null, vsAI = false, difficulty = 2;
-const music = document.getElementById('bgMusic');
+
+const music   = document.getElementById('bgMusic');
 const muteBtn = document.getElementById('muteBtn');
 
-// ─── CLICK SOUND (Web Audio API — initialised lazily on first user gesture) ──
+// ── Web Audio click (lazy init) ───────────────────────────────────────────────
 let audioCtx = null;
-
-function getAudioCtx() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return audioCtx;
-}
-
 function playClick() {
   try {
-    const ctx  = getAudioCtx();
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(audioCtx.destination);
     osc.type = 'square';
-    osc.frequency.setValueAtTime(1200, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.04);
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.07);
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.08);
   } catch(e) {}
 }
 
+// ── Core ──────────────────────────────────────────────────────────────────────
 function startGame() {
-  document.getElementById('startScreen').style.display = 'none';
-  vsAI = document.getElementById('modeSelect').value === 'ai';
+  document.getElementById('startOverlay').style.display = 'none';
+  vsAI       = document.getElementById('modeSelect').value === 'ai';
   difficulty = parseInt(document.getElementById('difficultySelect').value);
-  music.play().catch(e => console.log("Autoplay blocked"));
-  createGrid(); renderGrid(); updateTurnText();
-  if (vsAI && player === 2) setTimeout(aiMove, 300);
-}
-
-function toggleMusic() {
-  if (music.paused) { music.play(); muteBtn.innerText = 'Mute'; }
-  else { music.pause(); muteBtn.innerText = 'Unmute'; }
+  music.play().catch(() => {});
+  createGrid();
+  renderGrid();
+  updateTurnText();
+  if (vsAI && player === 2) setTimeout(aiMove, 400);
 }
 
 function createGrid() {
-  grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
-  player = 1; winner = null;
+  grid   = Array.from({length: GRID_SIZE}, () => Array(GRID_SIZE).fill(0));
+  player = 1;
+  winner = null;
   document.getElementById('winnerText').innerText = '';
 }
 
 function renderGrid() {
-  const gridEl = document.getElementById('grid');
-  gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 40px)`;
-  gridEl.innerHTML = '';
+  const el = document.getElementById('grid');
+  el.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 40px)`;
+  el.innerHTML = '';
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       const cell = document.createElement('div');
-      cell.classList.add('cell');
+      cell.className = 'cell';
       if (grid[r][c] === 1) cell.classList.add('blue');
       if (grid[r][c] === 2) cell.classList.add('red');
-      cell.style.animation = ''; // clear any leftover inline animation
-      // (win-path is cleared automatically since we rebuild innerHTML from scratch)
       cell.addEventListener('click', () => handleClick(r, c));
-      gridEl.appendChild(cell);
+      el.appendChild(cell);
     }
   }
 }
@@ -213,83 +272,81 @@ function handleClick(r, c) {
   playClick();
   grid[r][c] = player;
   if (checkWin(player)) {
-    winner = player;
-    document.getElementById('winnerText').innerText = `Player ${player} Wins!`;
-    glowWinningTiles(player);
+    endGame(player);
   } else {
     player = player === 1 ? 2 : 1;
-    if (vsAI && player === 2) setTimeout(aiMove, 300);
+    renderGrid();
+    updateTurnText();
+    if (vsAI && player === 2) setTimeout(aiMove, 400);
   }
-  renderGrid(); updateTurnText();
 }
 
-// ─── AI ENTRY POINT ──────────────────────────────────────────────────────────
+function endGame(p) {
+  winner = p;
+  document.getElementById('winnerText').innerText = `Player ${p} Wins!`;
+  renderGrid();
+  updateTurnText();
+  glowWinningTiles(p);
+}
+
+function resetGame() {
+  createGrid();
+  renderGrid();
+  updateTurnText();
+}
+
+function toggleMusic() {
+  if (music.paused) { music.play(); muteBtn.innerText = 'Mute'; }
+  else              { music.pause(); muteBtn.innerText = 'Unmute'; }
+}
+
+// ── AI entry ──────────────────────────────────────────────────────────────────
 function aiMove() {
   if (winner) return;
-  let move;
-  if      (difficulty === 1) move = easyMove();
-  else if (difficulty === 2) move = mediumMove();
-  else                       move = hardMove();
-
-  const [r, c] = move;
+  const move = difficulty === 1 ? easyMove()
+             : difficulty === 2 ? mediumMove()
+             :                    hardMove();
   playClick();
-  grid[r][c] = 2;
+  grid[move[0]][move[1]] = 2;
   if (checkWin(2)) {
-    winner = 2;
-    document.getElementById('winnerText').innerText = `Player 2 Wins!`;
-    glowWinningTiles(2);
+    endGame(2);
   } else {
     player = 1;
+    renderGrid();
+    updateTurnText();
   }
-  renderGrid(); updateTurnText();
 }
 
-// ─── SHARED HELPERS ───────────────────────────────────────────────────────────
+// ── Shared helpers ────────────────────────────────────────────────────────────
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+
+function inBounds(r, c) { return r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE; }
 
 function getEmpty() {
-  const empty = [];
+  const out = [];
   for (let r = 0; r < GRID_SIZE; r++)
     for (let c = 0; c < GRID_SIZE; c++)
-      if (grid[r][c] === 0) empty.push([r, c]);
-  return empty;
+      if (grid[r][c] === 0) out.push([r, c]);
+  return out;
 }
 
-// Returns the move that would immediately win for player p, or null.
 function findWinningMove(p) {
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       if (grid[r][c] !== 0) continue;
       grid[r][c] = p;
-      const wins = checkWin(p);
+      const w = checkWin(p);
       grid[r][c] = 0;
-      if (wins) return [r, c];
+      if (w) return [r, c];
     }
   }
   return null;
 }
 
-function countAdjacent(r, c, p) {
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; // flat sides only
-  let n = 0;
-  for (const [dr, dc] of dirs) {
-    const nr = r + dr, nc = c + dc;
-    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === p) n++;
-  }
-  return n;
-}
-
-/**
- * Shortest-path estimate for player p using 0-1 Dijkstra BFS.
- * Own tiles cost 0, empty cells cost 1, opponent tiles are impassable.
- * Player 1 (blue): top row → bottom row.
- * Player 2 (red):  left col → right col.
- * Returns number of empty cells still needed to complete the bridge.
- */
 function shortestPath(p) {
-  const opp = p === 1 ? 2 : 1;
-  const dist = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(Infinity));
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; // flat sides only — no diagonals
-  const pq = [];
+  const opp  = p === 1 ? 2 : 1;
+  const dist = Array.from({length: GRID_SIZE}, () => Array(GRID_SIZE).fill(Infinity));
+  const pq   = [];
 
   if (p === 1) {
     for (let c = 0; c < GRID_SIZE; c++) {
@@ -305,287 +362,241 @@ function shortestPath(p) {
     }
   }
 
-  while (pq.length > 0) {
+  while (pq.length) {
     pq.sort((a, b) => a.cost - b.cost);
     const {r, c, cost} = pq.shift();
     if (cost > dist[r][c]) continue;
-    for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
-      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
-      if (grid[nr][nc] === opp) continue;
-      const moveCost = grid[nr][nc] === p ? 0 : 1;
-      const newCost = dist[r][c] + moveCost;
-      if (newCost < dist[nr][nc]) {
-        dist[nr][nc] = newCost;
-        pq.push({r: nr, c: nc, cost: newCost});
-      }
+    for (const [dr, dc] of DIRS) {
+      const nr = r+dr, nc = c+dc;
+      if (!inBounds(nr, nc) || grid[nr][nc] === opp) continue;
+      const nc2 = dist[r][c] + (grid[nr][nc] === p ? 0 : 1);
+      if (nc2 < dist[nr][nc]) { dist[nr][nc] = nc2; pq.push({r:nr, c:nc, cost:nc2}); }
     }
   }
 
   let best = Infinity;
-  if (p === 1) {
-    for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
-  } else {
-    for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
-  }
+  if (p === 1) for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
+  else         for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
   return best;
 }
 
-// ─── EASY ────────────────────────────────────────────────────────────────────
-// Always blocks an immediate loss. Otherwise plays randomly.
-// This gives the AI survival instinct but no offensive strategy.
+// ── Easy ──────────────────────────────────────────────────────────────────────
 function easyMove() {
-  // Block the human winning on this turn
   const block = findWinningMove(1);
   if (block) return block;
-
-  // Otherwise: random
-  const empty = getEmpty();
-  return empty[Math.floor(Math.random() * empty.length)];
+  const e = getEmpty();
+  return e[Math.floor(Math.random() * e.length)];
 }
 
+// ── Medium ────────────────────────────────────────────────────────────────────
+function evaluate() {
+  const my = shortestPath(2), op = shortestPath(1);
+  const ms = my === Infinity ? 100 : my;
+  const os = op === Infinity ? 100 : op;
+  return (os - ms) + Math.max(0, 6 - ms) * 0.5 - Math.max(0, 6 - os) * 1.2;
+}
 
-// ─── MEDIUM ──────────────────────────────────────────────────────────────────
-
-// Shared path-differential sort used by medium move and its 2-ply lookahead.
 function sortedCandidates(p, limit = 12) {
   const opp = p === 1 ? 2 : 1;
-  return getEmpty()
-    .map(([r, c]) => {
-      grid[r][c] = p;
-      const score = shortestPath(opp) - shortestPath(p);
-      grid[r][c] = 0;
-      return { r, c, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ r, c }) => [r, c]);
+  return getEmpty().map(([r, c]) => {
+    grid[r][c] = p;
+    const s = shortestPath(opp) - shortestPath(p);
+    grid[r][c] = 0;
+    return {r, c, s};
+  }).sort((a, b) => b.s - a.s).slice(0, limit).map(({r, c}) => [r, c]);
 }
 
-// Basic evaluation for medium mode.
-function evaluate() {
-  const myPath  = shortestPath(2);
-  const oppPath = shortestPath(1);
-  const myScore  = myPath  === Infinity ?  100 : myPath;
-  const oppScore = oppPath === Infinity ? -100 : oppPath;
-  const urgency = Math.max(0, 6 - myScore);
-  const danger  = Math.max(0, 6 - oppScore);
-  return (oppScore - myScore) + (urgency * 0.5) - (danger * 1.2);
-}
-
-// Win immediately → block immediately → 2-ply lookahead:
-//   For each AI candidate move, simulate the human's single best response,
-//   then score the resulting board. This makes medium anticipate your reply
-//   without the full cost of deep minimax.
 function mediumMove() {
-  const win = findWinningMove(2);
-  if (win) return win;
-
-  const block = findWinningMove(1);
-  if (block) return block;
-
-  const candidates = sortedCandidates(2); // pre-sorted by greedy, top 12
-
-  let bestMove = null, bestScore = -Infinity;
-
-  for (const [r, c] of candidates) {
+  const win   = findWinningMove(2); if (win)   return win;
+  const block = findWinningMove(1); if (block) return block;
+  const cands = sortedCandidates(2);
+  let best = null, bScore = -Infinity;
+  for (const [r, c] of cands) {
     grid[r][c] = 2;
-
-    // Simulate the human's best single reply (greedy, no deep search)
-    let scoreAfterReply;
-    const humanWin = findWinningMove(1);
-    if (humanWin) {
-      // Human can win immediately after our move — very bad
-      scoreAfterReply = -5000;
+    let s;
+    if (findWinningMove(1)) {
+      s = -5000;
     } else {
-      // Human plays their greedy-best cell
-      const humanCandidates = sortedCandidates(1);
-      if (humanCandidates.length > 0) {
-        const [hr, hc] = humanCandidates[0];
-        grid[hr][hc] = 1;
-        scoreAfterReply = evaluate();
-        grid[hr][hc] = 0;
-      } else {
-        scoreAfterReply = evaluate();
+      const hc = sortedCandidates(1);
+      if (hc.length) {
+        const [hr, hcc] = hc[0];
+        grid[hr][hcc] = 1; s = evaluate(); grid[hr][hcc] = 0;
+      } else { s = evaluate(); }
+    }
+    grid[r][c] = 0;
+    s += Math.random() * 0.3;
+    if (s > bScore) { bScore = s; best = [r, c]; }
+  }
+  return best || getEmpty()[0];
+}
+
+// ── Hard ──────────────────────────────────────────────────────────────────────
+function virtualConnectionScore(p) {
+  let score = 0;
+  const own = [];
+  for (let r = 0; r < GRID_SIZE; r++)
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (grid[r][c] === p) own.push([r, c]);
+  for (const [r, c] of own) {
+    const nb = new Set();
+    for (const [dr, dc] of DIRS) {
+      const nr = r+dr, nc = c+dc;
+      if (inBounds(nr, nc) && grid[nr][nc] === 0) nb.add(`${nr}-${nc}`);
+    }
+    for (const [r2, c2] of own) {
+      if (r2 === r && c2 === c) continue;
+      for (const [dr, dc] of DIRS) {
+        const nr = r2+dr, nc = c2+dc;
+        if (nb.has(`${nr}-${nc}`)) { score += 1.5; break; }
       }
     }
-
-    grid[r][c] = 0;
-
-    // Small jitter so medium isn't perfectly deterministic
-    const score = scoreAfterReply + (Math.random() * 0.3);
-    if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
   }
-
-  return bestMove || getEmpty()[0];
+  return score;
 }
 
-// ─── HARD ────────────────────────────────────────────────────────────────────
-// Minimax + alpha-beta with three major upgrades over the previous version:
-//
-// 1. STRONGER EVALUATION — uses a weighted sum of:
-//      • Path differential (own shortest path vs opponent's)
-//      • Connectivity bonus: rewards having more own tiles on the optimal path
-//      • Virtual connection bonus: detects "bridge" patterns where two own tiles
-//        can connect through a shared empty cell the opponent can't block in one
-//        move — a very strong positional signal
-//      • Asymmetric danger weighting: punishes being close to losing harder
-//        than it rewards being close to winning (defensive urgency)
-//
-// 2. THREAT-AWARE MOVE ORDERING — sortedCandidatesHard scores each move by
-//      (how much it hurts opponent's path) + (how much it improves own path)
-//      + virtual connection bonus, not just the raw differential.
-//      This gives alpha-beta far better pruning because the strongest moves
-//      are tried first at every node.
-//
-// 3. ADAPTIVE DEPTH — scales from depth 2 (opening) up to depth 5 (endgame),
-//    with a 14-candidate cap at root and 10 inside the tree.
-
-function hardMove() {
-  // Instant win
-  const win = findWinningMove(2);
-  if (win) return win;
-
-  // Instant block
-  const block = findWinningMove(1);
-  if (block) return block;
-
-  const empty = getEmpty();
-  // Adaptive depth: shallow opening (board too wide), deepen as game progresses
-  const depth = empty.length > 48 ? 2
-              : empty.length > 32 ? 3
-              : empty.length > 16 ? 4
-              : 5;
-
-  let bestMove = null, bestScore = -Infinity;
-  let alpha = -Infinity, beta = Infinity;
-
-  for (const [r, c] of sortedCandidatesHard(2, 14)) {
-    grid[r][c] = 2;
-    const score = minimaxHard(depth - 1, false, alpha, beta);
-    grid[r][c] = 0;
-    if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
-    if (bestScore > alpha) alpha = bestScore;
+function criticalCells(p) {
+  const opp = p === 1 ? 2 : 1;
+  const dist = Array.from({length: GRID_SIZE}, () => Array(GRID_SIZE).fill(Infinity));
+  const pq = [];
+  if (p === 1) {
+    for (let c = 0; c < GRID_SIZE; c++) { if (grid[0][c] === opp) continue; const cost = grid[0][c] === p ? 0 : 1; dist[0][c] = cost; pq.push({r:0, c, cost}); }
+  } else {
+    for (let r = 0; r < GRID_SIZE; r++) { if (grid[r][0] === opp) continue; const cost = grid[r][0] === p ? 0 : 1; dist[r][0] = cost; pq.push({r, c:0, cost}); }
   }
+  while (pq.length) {
+    pq.sort((a, b) => a.cost - b.cost);
+    const {r, c, cost} = pq.shift(); if (cost > dist[r][c]) continue;
+    for (const [dr, dc] of DIRS) {
+      const nr = r+dr, nc = c+dc;
+      if (!inBounds(nr, nc) || grid[nr][nc] === opp) continue;
+      const nc2 = dist[r][c] + (grid[nr][nc] === p ? 0 : 1);
+      if (nc2 < dist[nr][nc]) { dist[nr][nc] = nc2; pq.push({r:nr, c:nc, cost:nc2}); }
+    }
+  }
+  let best = Infinity;
+  if (p === 1) for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
+  else         for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
+  if (best === Infinity) return 0;
+  let count = 0;
+  for (let r = 0; r < GRID_SIZE; r++)
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (dist[r][c] !== Infinity && dist[r][c] <= best && grid[r][c] === p) count++;
+  return count;
+}
 
-  return bestMove || empty[0];
+function evaluateHard() {
+  const mr = shortestPath(2), or_ = shortestPath(1);
+  const mp = mr === Infinity ? 999 : mr, op = or_ === Infinity ? 999 : or_;
+  const danger = op <= 3 ? (4 - op) * 5.0 : 0;
+  const win    = mp <= 3 ? (4 - mp) * 3.0 : 0;
+  return (op - mp) * 2.0 + win - danger
+       + criticalCells(2) * 0.4 - criticalCells(1) * 0.3
+       + virtualConnectionScore(2) * 0.5 - virtualConnectionScore(1) * 0.4;
+}
+
+function sortedCandidatesHard(p, limit = 10) {
+  const opp = p === 1 ? 2 : 1;
+  const bm = shortestPath(p), bo = shortestPath(opp);
+  return getEmpty().map(([r, c]) => {
+    grid[r][c] = p;
+    const mi = bm - shortestPath(p), oh = shortestPath(opp) - bo, vc = virtualConnectionScore(p) * 0.5;
+    grid[r][c] = 0;
+    return {r, c, s: mi * 1.5 + oh * 2.0 + vc};
+  }).sort((a, b) => b.s - a.s).slice(0, limit).map(({r, c}) => [r, c]);
 }
 
 function minimaxHard(depth, isMax, alpha, beta) {
   if (checkWin(2)) return  20000 + depth;
   if (checkWin(1)) return -20000 - depth;
   if (depth === 0)  return evaluateHard();
-
   const empty = getEmpty();
-  if (empty.length === 0) return evaluateHard();
-
-  const candidates = isMax
-    ? sortedCandidatesHard(2, 10)
-    : sortedCandidatesHard(1, 10);
-
+  if (!empty.length) return evaluateHard();
+  const cands = isMax ? sortedCandidatesHard(2, 10) : sortedCandidatesHard(1, 10);
   if (isMax) {
     let best = -Infinity;
-    for (const [r, c] of candidates) {
-      grid[r][c] = 2;
-      const score = minimaxHard(depth - 1, false, alpha, beta);
-      grid[r][c] = 0;
-      if (score > best) best = score;
-      if (best > alpha) alpha = best;
-      if (alpha >= beta) break;
+    for (const [r, c] of cands) {
+      grid[r][c] = 2; const s = minimaxHard(depth-1, false, alpha, beta); grid[r][c] = 0;
+      if (s > best) best = s; if (best > alpha) alpha = best; if (alpha >= beta) break;
     }
     return best;
   } else {
     let best = Infinity;
-    for (const [r, c] of candidates) {
-      grid[r][c] = 1;
-      const score = minimaxHard(depth - 1, true, alpha, beta);
-      grid[r][c] = 0;
-      if (score < best) best = score;
-      if (best < beta) beta = best;
-      if (beta <= alpha) break;
+    for (const [r, c] of cands) {
+      grid[r][c] = 1; const s = minimaxHard(depth-1, true, alpha, beta); grid[r][c] = 0;
+      if (s < best) best = s; if (best < beta) beta = best; if (beta <= alpha) break;
     }
     return best;
   }
 }
 
-/**
- * Counts empty cells that lie on the shortest path for player p.
- * These are "critical" cells — filling them directly advances the bridge.
- */
-function criticalCells(p) {
-  const opp = p === 1 ? 2 : 1;
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-  const dist = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(Infinity));
-  const pq = [];
-
-  if (p === 1) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      if (grid[0][c] === opp) continue;
-      const cost = grid[0][c] === p ? 0 : 1;
-      dist[0][c] = cost; pq.push({r:0, c, cost});
-    }
-  } else {
-    for (let r = 0; r < GRID_SIZE; r++) {
-      if (grid[r][0] === opp) continue;
-      const cost = grid[r][0] === p ? 0 : 1;
-      dist[r][0] = cost; pq.push({r, c:0, cost});
-    }
+function hardMove() {
+  const win   = findWinningMove(2); if (win)   return win;
+  const block = findWinningMove(1); if (block) return block;
+  const empty = getEmpty();
+  const depth = empty.length > 48 ? 2 : empty.length > 32 ? 3 : empty.length > 16 ? 4 : 5;
+  let best = null, bScore = -Infinity, alpha = -Infinity, beta = Infinity;
+  for (const [r, c] of sortedCandidatesHard(2, 14)) {
+    grid[r][c] = 2; const s = minimaxHard(depth-1, false, alpha, beta); grid[r][c] = 0;
+    if (s > bScore) { bScore = s; best = [r, c]; }
+    if (bScore > alpha) alpha = bScore;
   }
-
-  while (pq.length > 0) {
-    pq.sort((a, b) => a.cost - b.cost);
-    const {r, c, cost} = pq.shift();
-    if (cost > dist[r][c]) continue;
-    for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
-      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
-      if (grid[nr][nc] === opp) continue;
-      const moveCost = grid[nr][nc] === p ? 0 : 1;
-      const newCost = dist[r][c] + moveCost;
-      if (newCost < dist[nr][nc]) { dist[nr][nc] = newCost; pq.push({r:nr, c:nc, cost:newCost}); }
-    }
-  }
-
-  // Find best (minimum) cost to goal
-  let best = Infinity;
-  if (p === 1) for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
-  else         for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
-
-  if (best === Infinity) return 0;
-
-  // Count cells on any shortest path (dist[r][c] === best path cost that passes through here)
-  // Simplified: count cells with dist close to the optimal, on the optimal corridor
-  let count = 0;
-  for (let r = 0; r < GRID_SIZE; r++)
-    for (let c = 0; c < GRID_SIZE; c++)
-      if (dist[r][c] !== Infinity && dist[r][c] <= best && grid[r][c] === p)
-        count++;
-  return count;
+  return best || empty[0];
 }
 
-/**
- * Detects "virtual connections" for player p:
- * Two own tiles that share exactly one empty neighbour (a "bridge cell").
- * The opponent can't block both connections in one move, so this is
- * strategically equivalent to a direct connection.
- */
-function virtualConnectionScore(p) {
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-  let score = 0;
-  const ownTiles = [];
+// ── Win detection ─────────────────────────────────────────────────────────────
+function checkWin(p) {
+  const visited = new Set();
+  let found = false;
+  function dfs(r, c) {
+    const key = `${r}-${c}`;
+    if (visited.has(key)) return;
+    visited.add(key);
+    if ((p === 1 && r === GRID_SIZE - 1) || (p === 2 && c === GRID_SIZE - 1)) { found = true; return; }
+    for (const [dr, dc] of DIRS) {
+      const nr = r+dr, nc = c+dc;
+      if (inBounds(nr, nc) && grid[nr][nc] === p) dfs(nr, nc);
+    }
+  }
+  if (p === 1) { for (let c = 0; c < GRID_SIZE; c++) if (grid[0][c] === p) dfs(0, c); }
+  else         { for (let r = 0; r < GRID_SIZE; r++) if (grid[r][0] === p) dfs(r, 0); }
+  return found;
+}
+
+// ── Winning path glow ─────────────────────────────────────────────────────────
+function glowWinningTiles(p) {
+  const onPath = new Set();
+  function bfs(startR, startC) {
+    const prev = {[`${startR}-${startC}`]: null};
+    const queue = [[startR, startC]];
+    const reached = [];
+    while (queue.length) {
+      const [r, c] = queue.shift();
+      if ((p === 1 && r === GRID_SIZE-1) || (p === 2 && c === GRID_SIZE-1)) reached.push([r, c]);
+      for (const [dr, dc] of DIRS) {
+        const nr = r+dr, nc = c+dc, key = `${nr}-${nc}`;
+        if (inBounds(nr, nc) && grid[nr][nc] === p && !(key in prev)) {
+          prev[key] = [r, c]; queue.push([nr, nc]);
+        }
+      }
+    }
+    for (const [gr, gc] of reached) {
+      let cur = [gr, gc];
+      while (cur) { onPath.add(`${cur[0]}-${cur[1]}`); cur = prev[`${cur[0]}-${cur[1]}`]; }
+    }
+  }
+  if (p === 1) { for (let c = 0; c < GRID_SIZE; c++) if (grid[0][c] === p) bfs(0, c); }
+  else         { for (let r = 0; r < GRID_SIZE; r++) if (grid[r][0] === p) bfs(r, 0); }
+
+  const el = document.getElementById('grid');
   for (let r = 0; r < GRID_SIZE; r++)
     for (let c = 0; c < GRID_SIZE; c++)
-      if (grid[r][c] === p) ownTiles.push([r, c]);
+      if (onPath.has(`${r}-${c}`)) el.children[r * GRID_SIZE + c].classList.add('win-path');
+}
 
-  for (const [r, c] of ownTiles) {
-    // Gather empty neighbours of this tile
-    const emptyNeighbours = new Set();
-    for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === 0)
-        emptyNeighbours.add(`${nr}-${nc}`);
-    }
-    // Check each other own tile for shared empty neighbour
-    for (const [r2, c2] of ownTiles) {
-      if (r2 === r && c2 === c) continue;
-      
+// ── Button wiring ─────────────────────────────────────────────────────────────
+document.getElementById('startGameBtn').addEventListener('click', startGame);
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+document.getElementById('muteBtn').addEventListener('click', toggleMusic);
+</script>
+</body>
+</html>
