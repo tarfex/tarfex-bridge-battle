@@ -114,12 +114,7 @@ body {
     <li>Background music can be muted using the Mute button.</li>
     <li>Play against a friend or challenge the computer at Easy, Medium, or Hard.</li>
   </ul>
-  <p><strong>Difficulty levels:</strong></p>
-  <ul>
-    <li><strong>Easy:</strong> Plays randomly with no strategy.</li>
-    <li><strong>Medium:</strong> Will win or block when possible, otherwise plays toward the center.</li>
-    <li><strong>Hard:</strong> Uses a shortest-path heuristic to pick the best move every turn.</li>
-  </ul>
+
 </div>
 
 <div id="gameArea">
@@ -216,69 +211,7 @@ function aiMove() {
   renderGrid(); updateTurnText();
 }
 
-// ─── EASY: fully random ───────────────────────────────────────────────────────
-function easyMove() {
-  const empty = getEmpty();
-  return empty[Math.floor(Math.random() * empty.length)];
-}
-
-// ─── MEDIUM: win if possible → block if needed → prefer center columns ────────
-// Red (AI) connects left→right, so prioritise cells in the middle columns.
-function mediumMove() {
-  // 1. Take the win if available
-  const win = findWinningMove(2);
-  if (win) return win;
-
-  // 2. Block the human's winning move
-  const block = findWinningMove(1);
-  if (block) return block;
-
-  // 3. Prefer cells in the middle-ish columns (closer to c = GRID_SIZE/2)
-  // and that are adjacent to an existing red tile (to build a chain)
-  const candidates = getEmpty().map(([r, c]) => {
-    let score = 0;
-    // Favour middle columns — red needs left-to-right bridge
-    score += (GRID_SIZE / 2) - Math.abs(c - GRID_SIZE / 2);
-    // Bonus for adjacency to own tiles
-    score += countAdjacent(r, c, 2) * 3;
-    // Small random jitter so the AI isn't deterministic
-    score += Math.random() * 0.5;
-    return { r, c, score };
-  });
-
-  candidates.sort((a, b) => b.score - a.score);
-  return [candidates[0].r, candidates[0].c];
-}
-
-// ─── HARD: shortest-path heuristic ───────────────────────────────────────────
-// Uses Dijkstra-style BFS to estimate how many more moves each player needs
-// to complete their bridge.  Picks the move that maximises
-//   (opponent's shortest path) - (own shortest path).
-function hardMove() {
-  // 1. Instant win
-  const win = findWinningMove(2);
-  if (win) return win;
-
-  // 2. Must block instant loss
-  const block = findWinningMove(1);
-  if (block) return block;
-
-  // 3. Evaluate every empty cell
-  let bestMove = null, bestScore = -Infinity;
-  for (const [r, c] of getEmpty()) {
-    grid[r][c] = 2;
-    const myPath    = shortestPath(2);   // lower = closer to winning
-    const oppPath   = shortestPath(1);
-    // We want our path to be short and opponent's to be long
-    const score = oppPath - myPath;
-    grid[r][c] = 0;
-
-    if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
-  }
-  return bestMove || easyMove();
-}
-
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// ─── SHARED HELPERS ───────────────────────────────────────────────────────────
 
 function getEmpty() {
   const empty = [];
@@ -313,31 +246,29 @@ function countAdjacent(r, c, p) {
 }
 
 /**
- * Shortest-path estimate for player p using a 0-1 BFS (Dijkstra variant).
- * Empty cells cost 1 move; own tiles cost 0.
- * Player 1 (blue) bridges rows 0→(GRID_SIZE-1).
- * Player 2 (red)  bridges cols 0→(GRID_SIZE-1).
- * Returns the minimum number of empty cells that still need to be filled.
+ * Shortest-path estimate for player p using 0-1 Dijkstra BFS.
+ * Own tiles cost 0, empty cells cost 1, opponent tiles are impassable.
+ * Player 1 (blue): top row → bottom row.
+ * Player 2 (red):  left col → right col.
+ * Returns number of empty cells still needed to complete the bridge.
  */
 function shortestPath(p) {
+  const opp = p === 1 ? 2 : 1;
   const dist = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(Infinity));
   const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-
-  // Min-heap via sorted array is fine for 8×8
-  const pq = []; // {r, c, cost}
+  const pq = [];
 
   if (p === 1) {
-    // Start from every cell in row 0 that is not the opponent's
     for (let c = 0; c < GRID_SIZE; c++) {
-      if (grid[0][c] === 2) continue; // blocked by opponent
-      const cost = grid[0][c] === 1 ? 0 : 1;
-      if (cost < dist[0][c]) { dist[0][c] = cost; pq.push({r:0, c, cost}); }
+      if (grid[0][c] === opp) continue;
+      const cost = grid[0][c] === p ? 0 : 1;
+      dist[0][c] = cost; pq.push({r:0, c, cost});
     }
   } else {
     for (let r = 0; r < GRID_SIZE; r++) {
-      if (grid[r][0] === 1) continue;
-      const cost = grid[r][0] === 2 ? 0 : 1;
-      if (cost < dist[r][0]) { dist[r][0] = cost; pq.push({r, c:0, cost}); }
+      if (grid[r][0] === opp) continue;
+      const cost = grid[r][0] === p ? 0 : 1;
+      dist[r][0] = cost; pq.push({r, c:0, cost});
     }
   }
 
@@ -345,11 +276,10 @@ function shortestPath(p) {
     pq.sort((a, b) => a.cost - b.cost);
     const {r, c, cost} = pq.shift();
     if (cost > dist[r][c]) continue;
-
     for (const [dr, dc] of dirs) {
       const nr = r + dr, nc = c + dc;
       if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
-      if (grid[nr][nc] === (p === 1 ? 2 : 1)) continue; // opponent's tile — impassable
+      if (grid[nr][nc] === opp) continue;
       const moveCost = grid[nr][nc] === p ? 0 : 1;
       const newCost = dist[r][c] + moveCost;
       if (newCost < dist[nr][nc]) {
@@ -359,14 +289,109 @@ function shortestPath(p) {
     }
   }
 
-  // Collect minimum cost at goal edge
   let best = Infinity;
   if (p === 1) {
-    for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE - 1][c]);
+    for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
   } else {
-    for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE - 1]);
+    for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
   }
   return best;
+}
+
+// ─── EASY ────────────────────────────────────────────────────────────────────
+// Always blocks an immediate loss. Otherwise plays randomly.
+// This gives the AI survival instinct but no offensive strategy.
+function easyMove() {
+  // Block the human winning on this turn
+  const block = findWinningMove(1);
+  if (block) return block;
+
+  // Otherwise: random
+  const empty = getEmpty();
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+
+// ─── MEDIUM ──────────────────────────────────────────────────────────────────
+// Blocks immediate loss AND takes an immediate win.
+// Offensive strategy: score cells by own shortest-path improvement + adjacency.
+// Defensive awareness: also scores how much a cell hurts the opponent's path.
+// Uses a 60/40 weighted blend of offence vs defence to stay beatable.
+function mediumMove() {
+  // 1. Take the win immediately
+  const win = findWinningMove(2);
+  if (win) return win;
+
+  // 2. Block the human's immediate win
+  const block = findWinningMove(1);
+  if (block) return block;
+
+  // 3. Score every empty cell
+  const baseMy  = shortestPath(2);
+  const baseOpp = shortestPath(1);
+
+  const candidates = getEmpty().map(([r, c]) => {
+    // Offensive score: how much this move shortens our own path
+    grid[r][c] = 2;
+    const myImprove = baseMy - shortestPath(2);   // positive = good for us
+    grid[r][c] = 0;
+
+    // Defensive score: how much this move lengthens opponent's path
+    grid[r][c] = 1;
+    const oppHurt = shortestPath(1) - baseOpp;    // positive = bad for opponent
+    grid[r][c] = 0;
+
+    // 60% offence, 40% defence — beatable but not trivial
+    const score = (0.6 * myImprove) + (0.4 * oppHurt)
+                + (countAdjacent(r, c, 2) * 0.5)  // small chain bonus
+                + (Math.random() * 0.4);            // jitter to avoid determinism
+    return { r, c, score };
+  });
+
+  candidates.sort((a, b) => b.score - a.score);
+  return [candidates[0].r, candidates[0].c];
+}
+
+// ─── HARD ────────────────────────────────────────────────────────────────────
+// Blocks immediate loss AND takes immediate win.
+// Full shortest-path evaluation: picks the move that maximises
+//   (opponent's new path length) - (own new path length)
+// weighted 50/50, making it play both sides of the board optimally.
+// Also looks one move ahead for "near-win" threats (opponent 1 move from winning).
+function hardMove() {
+  // 1. Take the win immediately
+  const win = findWinningMove(2);
+  if (win) return win;
+
+  // 2. Block the human's immediate win
+  const block = findWinningMove(1);
+  if (block) return block;
+
+  // 3. Block any move where the human would be 1 step from winning next turn
+  // (i.e. if human plays X and then has a winning move, block X now)
+  for (const [r, c] of getEmpty()) {
+    grid[r][c] = 1; // simulate human playing here
+    const threat = findWinningMove(1); // would human then have a winning follow-up?
+    grid[r][c] = 0;
+    if (threat) {
+      // Playing here ourselves blocks the setup
+      return [r, c];
+    }
+  }
+
+  // 4. Full path-differential evaluation
+  let bestMove = null, bestScore = -Infinity;
+  for (const [r, c] of getEmpty()) {
+    grid[r][c] = 2;
+    const myPath  = shortestPath(2);
+    const oppPath = shortestPath(1);
+    grid[r][c] = 0;
+
+    // Equal weight on shortening own path and lengthening opponent's
+    const score = oppPath - myPath;
+    if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
+  }
+
+  return bestMove || getEmpty()[0];
 }
 
 function glowWinningTiles(p) {
