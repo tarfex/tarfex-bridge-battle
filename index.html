@@ -114,6 +114,12 @@ body {
     <li>Background music can be muted using the Mute button.</li>
     <li>Play against a friend or challenge the computer at Easy, Medium, or Hard.</li>
   </ul>
+  <p><strong>Difficulty levels:</strong></p>
+  <ul>
+    <li><strong>Easy:</strong> Plays randomly with no strategy.</li>
+    <li><strong>Medium:</strong> Will win or block when possible, otherwise plays toward the center.</li>
+    <li><strong>Hard:</strong> Uses a shortest-path heuristic to pick the best move every turn.</li>
+  </ul>
 </div>
 
 <div id="gameArea">
@@ -131,150 +137,269 @@ body {
 </div>
 
 <script>
-const GRID_SIZE=8;
-let grid=[],player=1,winner=null,vsAI=false,difficulty=2;
-const music=document.getElementById('bgMusic');
+const GRID_SIZE = 8;
+let grid = [], player = 1, winner = null, vsAI = false, difficulty = 2;
+const music = document.getElementById('bgMusic');
+const muteBtn = document.getElementById('muteBtn');
 
-function startGame(){
-  document.getElementById('startScreen').style.display='none';
-  vsAI=document.getElementById('modeSelect').value==='ai';
-  difficulty=parseInt(document.getElementById('difficultySelect').value);
-  music.play().catch(e=>console.log("Autoplay blocked"));
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  vsAI = document.getElementById('modeSelect').value === 'ai';
+  difficulty = parseInt(document.getElementById('difficultySelect').value);
+  music.play().catch(e => console.log("Autoplay blocked"));
   createGrid(); renderGrid(); updateTurnText();
-  if(vsAI && player===2) setTimeout(aiMove,300);
+  if (vsAI && player === 2) setTimeout(aiMove, 300);
 }
 
-function toggleMusic(){ if(music.paused){music.play(); muteBtn.innerText='Mute';} else{music.pause(); muteBtn.innerText='Unmute';} }
+function toggleMusic() {
+  if (music.paused) { music.play(); muteBtn.innerText = 'Mute'; }
+  else { music.pause(); muteBtn.innerText = 'Unmute'; }
+}
 
-function createGrid(){ grid=Array(GRID_SIZE).fill().map(()=>Array(GRID_SIZE).fill(0)); player=1; winner=null; document.getElementById('winnerText').innerText=''; }
+function createGrid() {
+  grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  player = 1; winner = null;
+  document.getElementById('winnerText').innerText = '';
+}
 
-function renderGrid(){
-  const gridEl=document.getElementById('grid');
-  gridEl.style.gridTemplateColumns=`repeat(${GRID_SIZE},40px)`;
-  gridEl.innerHTML='';
-  for(let r=0;r<GRID_SIZE;r++){
-    for(let c=0;c<GRID_SIZE;c++){
-      const cell=document.createElement('div'); cell.classList.add('cell');
-      if(grid[r][c]===1) cell.classList.add('blue');
-      if(grid[r][c]===2) cell.classList.add('red');
-      cell.addEventListener('click',()=>handleClick(r,c));
+function renderGrid() {
+  const gridEl = document.getElementById('grid');
+  gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 40px)`;
+  gridEl.innerHTML = '';
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      if (grid[r][c] === 1) cell.classList.add('blue');
+      if (grid[r][c] === 2) cell.classList.add('red');
+      cell.addEventListener('click', () => handleClick(r, c));
       gridEl.appendChild(cell);
     }
   }
 }
 
-function updateTurnText(){ document.getElementById('turnText').innerText=winner?'':`Player ${player}'s Turn`; }
-
-function handleClick(r,c){
-  if(grid[r][c]!==0 || winner || (vsAI && player===2)) return;
-  grid[r][c]=player;
-  if(checkWin(player)){ winner=player; document.getElementById('winnerText').innerText=`Player ${player} Wins!`; glowWinningTiles(player);}
-  else{ player=player===1?2:1; if(vsAI && player===2) setTimeout(aiMove,300);}
-  renderGrid(); updateTurnText();
+function updateTurnText() {
+  document.getElementById('turnText').innerText = winner ? '' : `Player ${player}'s Turn`;
 }
 
-// AI move logic from scratch
-function aiMove(){
-  if(winner) return;
-  let move;
-  if(difficulty===1){ move=randomMoveEasy(); } // Easy
-  else if(difficulty===2){ move=randomMoveMedium(); } // Medium
-  else{ move=moveHardAI(); } // Hard
-  const [r,c]=move;
-  grid[r][c]=2;
-  if(checkWin(2)){ winner=2; document.getElementById('winnerText').innerText=`Player 2 Wins!`; glowWinningTiles(2);}
-  else player=1;
-  renderGrid(); updateTurnText();
-}
-
-// Easy: mostly random
-function randomMoveEasy(){
-  const empty=[];
-  for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===0) empty.push([r,c]);
-  return empty[Math.floor(Math.random()*empty.length)];
-}
-
-// Medium: block or extend
-function randomMoveMedium(){
-  // 1. Block immediate threat
-  const block=checkImmediateThreat(1);
-  if(block) return block;
-  // 2. Try to extend own path
-  const extend=extendPath(2);
-  if(extend) return extend;
-  return randomMoveEasy();
-}
-
-// Hard AI: evaluate all possible moves for max path + blocks
-function moveHardAI(){
-  let best=null,score=-Infinity;
-  const opp=1;
-  for(let r=0;r<GRID_SIZE;r++){
-    for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]!==0) continue;
-      let s=0;
-      grid[r][c]=2; if(checkWin(2)) s+=1000; // win immediately
-      grid[r][c]=opp; if(checkWin(opp)) s+=900; // block opponent
-      grid[r][c]=2; s+=pathScore(2,r,c); grid[r][c]=0;
-      if(s>score){ score=s; best=[r,c]; }
-    }
+function handleClick(r, c) {
+  if (grid[r][c] !== 0 || winner || (vsAI && player === 2)) return;
+  grid[r][c] = player;
+  if (checkWin(player)) {
+    winner = player;
+    document.getElementById('winnerText').innerText = `Player ${player} Wins!`;
+    glowWinningTiles(player);
+  } else {
+    player = player === 1 ? 2 : 1;
+    if (vsAI && player === 2) setTimeout(aiMove, 300);
   }
-  return best||randomMoveEasy();
+  renderGrid(); updateTurnText();
 }
 
-function checkImmediateThreat(p){
-  for(let r=0;r<GRID_SIZE;r++){
-    for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]!==0) continue;
-      grid[r][c]=p; if(checkWin(p)){ grid[r][c]=0; return [r,c]; } grid[r][c]=0;
+// ─── AI ENTRY POINT ──────────────────────────────────────────────────────────
+function aiMove() {
+  if (winner) return;
+  let move;
+  if      (difficulty === 1) move = easyMove();
+  else if (difficulty === 2) move = mediumMove();
+  else                       move = hardMove();
+
+  const [r, c] = move;
+  grid[r][c] = 2;
+  if (checkWin(2)) {
+    winner = 2;
+    document.getElementById('winnerText').innerText = `Player 2 Wins!`;
+    glowWinningTiles(2);
+  } else {
+    player = 1;
+  }
+  renderGrid(); updateTurnText();
+}
+
+// ─── EASY: fully random ───────────────────────────────────────────────────────
+function easyMove() {
+  const empty = getEmpty();
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+
+// ─── MEDIUM: win if possible → block if needed → prefer center columns ────────
+// Red (AI) connects left→right, so prioritise cells in the middle columns.
+function mediumMove() {
+  // 1. Take the win if available
+  const win = findWinningMove(2);
+  if (win) return win;
+
+  // 2. Block the human's winning move
+  const block = findWinningMove(1);
+  if (block) return block;
+
+  // 3. Prefer cells in the middle-ish columns (closer to c = GRID_SIZE/2)
+  // and that are adjacent to an existing red tile (to build a chain)
+  const candidates = getEmpty().map(([r, c]) => {
+    let score = 0;
+    // Favour middle columns — red needs left-to-right bridge
+    score += (GRID_SIZE / 2) - Math.abs(c - GRID_SIZE / 2);
+    // Bonus for adjacency to own tiles
+    score += countAdjacent(r, c, 2) * 3;
+    // Small random jitter so the AI isn't deterministic
+    score += Math.random() * 0.5;
+    return { r, c, score };
+  });
+
+  candidates.sort((a, b) => b.score - a.score);
+  return [candidates[0].r, candidates[0].c];
+}
+
+// ─── HARD: shortest-path heuristic ───────────────────────────────────────────
+// Uses Dijkstra-style BFS to estimate how many more moves each player needs
+// to complete their bridge.  Picks the move that maximises
+//   (opponent's shortest path) - (own shortest path).
+function hardMove() {
+  // 1. Instant win
+  const win = findWinningMove(2);
+  if (win) return win;
+
+  // 2. Must block instant loss
+  const block = findWinningMove(1);
+  if (block) return block;
+
+  // 3. Evaluate every empty cell
+  let bestMove = null, bestScore = -Infinity;
+  for (const [r, c] of getEmpty()) {
+    grid[r][c] = 2;
+    const myPath    = shortestPath(2);   // lower = closer to winning
+    const oppPath   = shortestPath(1);
+    // We want our path to be short and opponent's to be long
+    const score = oppPath - myPath;
+    grid[r][c] = 0;
+
+    if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
+  }
+  return bestMove || easyMove();
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function getEmpty() {
+  const empty = [];
+  for (let r = 0; r < GRID_SIZE; r++)
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (grid[r][c] === 0) empty.push([r, c]);
+  return empty;
+}
+
+// Returns the move that would immediately win for player p, or null.
+function findWinningMove(p) {
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (grid[r][c] !== 0) continue;
+      grid[r][c] = p;
+      const wins = checkWin(p);
+      grid[r][c] = 0;
+      if (wins) return [r, c];
     }
   }
   return null;
 }
 
-function extendPath(p){
-  const dirs=[[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
-  for(let r=0;r<GRID_SIZE;r++){
-    for(let c=0;c<GRID_SIZE;c++){
-      if(grid[r][c]!==0) continue;
-      for(const [dr,dc] of dirs){
-        const nr=r+dr,nc=c+dc;
-        if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) return [r,c];
+function countAdjacent(r, c, p) {
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  let n = 0;
+  for (const [dr, dc] of dirs) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === p) n++;
+  }
+  return n;
+}
+
+/**
+ * Shortest-path estimate for player p using a 0-1 BFS (Dijkstra variant).
+ * Empty cells cost 1 move; own tiles cost 0.
+ * Player 1 (blue) bridges rows 0→(GRID_SIZE-1).
+ * Player 2 (red)  bridges cols 0→(GRID_SIZE-1).
+ * Returns the minimum number of empty cells that still need to be filled.
+ */
+function shortestPath(p) {
+  const dist = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(Infinity));
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+
+  // Min-heap via sorted array is fine for 8×8
+  const pq = []; // {r, c, cost}
+
+  if (p === 1) {
+    // Start from every cell in row 0 that is not the opponent's
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (grid[0][c] === 2) continue; // blocked by opponent
+      const cost = grid[0][c] === 1 ? 0 : 1;
+      if (cost < dist[0][c]) { dist[0][c] = cost; pq.push({r:0, c, cost}); }
+    }
+  } else {
+    for (let r = 0; r < GRID_SIZE; r++) {
+      if (grid[r][0] === 1) continue;
+      const cost = grid[r][0] === 2 ? 0 : 1;
+      if (cost < dist[r][0]) { dist[r][0] = cost; pq.push({r, c:0, cost}); }
+    }
+  }
+
+  while (pq.length > 0) {
+    pq.sort((a, b) => a.cost - b.cost);
+    const {r, c, cost} = pq.shift();
+    if (cost > dist[r][c]) continue;
+
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
+      if (grid[nr][nc] === (p === 1 ? 2 : 1)) continue; // opponent's tile — impassable
+      const moveCost = grid[nr][nc] === p ? 0 : 1;
+      const newCost = dist[r][c] + moveCost;
+      if (newCost < dist[nr][nc]) {
+        dist[nr][nc] = newCost;
+        pq.push({r: nr, c: nc, cost: newCost});
       }
     }
   }
-  return null;
-}
 
-// Simple heuristic: number of adjacent tiles for score
-function pathScore(p,r,c){
-  let score=0;
-  const dirs=[[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
-  for(const [dr,dc] of dirs){
-    const nr=r+dr,nc=c+dc;
-    if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p) score+=5;
+  // Collect minimum cost at goal edge
+  let best = Infinity;
+  if (p === 1) {
+    for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE - 1][c]);
+  } else {
+    for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE - 1]);
   }
-  return score;
+  return best;
 }
 
-function glowWinningTiles(p){
-  const gridEl=document.getElementById('grid');
-  for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++) if(grid[r][c]===p){ const cell=gridEl.children[r*GRID_SIZE+c]; cell.style.animation=p===1?'neonBlue 1s infinite alternate':'neonRed 1s infinite alternate'; }
+function glowWinningTiles(p) {
+  const gridEl = document.getElementById('grid');
+  for (let r = 0; r < GRID_SIZE; r++)
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (grid[r][c] === p) {
+        const cell = gridEl.children[r * GRID_SIZE + c];
+        cell.style.animation = p === 1 ? 'neonBlue 1s infinite alternate' : 'neonRed 1s infinite alternate';
+      }
 }
 
-function resetGame(){ createGrid(); renderGrid(); updateTurnText(); }
+function resetGame() { createGrid(); renderGrid(); updateTurnText(); }
 
-function checkWin(p){
-  const visited=new Set(); let found=false;
-  function dfs(r,c){ const key=r+'-'+c; if(visited.has(key)) return false; visited.add(key);
-    if(p===1 && r===GRID_SIZE-1){ found=true; return true; }
-    if(p===2 && c===GRID_SIZE-1){ found=true; return true; }
-    const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-    for(const [dr,dc] of dirs){ const nr=r+dr,nc=c+dc; if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE && grid[nr][nc]===p){ if(dfs(nr,nc)) return true; } }
+function checkWin(p) {
+  const visited = new Set();
+  let found = false;
+  function dfs(r, c) {
+    const key = r + '-' + c;
+    if (visited.has(key)) return false;
+    visited.add(key);
+    if (p === 1 && r === GRID_SIZE - 1) { found = true; return true; }
+    if (p === 2 && c === GRID_SIZE - 1) { found = true; return true; }
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === p)
+        if (dfs(nr, nc)) return true;
+    }
     return false;
   }
-  if(p===1){ for(let c=0;c<GRID_SIZE;c++) if(grid[0][c]===p && dfs(0,c)) break; }
-  if(p===2){ for(let r=0;r<GRID_SIZE;r++) if(grid[r][0]===p && dfs(r,0)) break; }
+  if (p === 1) { for (let c = 0; c < GRID_SIZE; c++) if (grid[0][c] === p && dfs(0, c)) break; }
+  if (p === 2) { for (let r = 0; r < GRID_SIZE; r++) if (grid[r][0] === p && dfs(r, 0)) break; }
   return found;
 }
 </script>
