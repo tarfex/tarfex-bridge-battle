@@ -25,56 +25,53 @@ body {
   text-align: center;
   color: #0ff;
   z-index: 999;
+  padding: 20px;
 }
-#startOverlay img { max-width: 90vw; max-height: 35vh; margin-bottom: 10px; }
-#startOverlay h1  { margin: 6px 0; }
-#startOverlay p   { margin: 4px 0; }
+#startOverlay img { max-width: 90vw; max-height: 30vh; margin-bottom: 10px; }
+#startOverlay h1  { margin: 6px 0; font-size: clamp(1.1em, 5vw, 1.8em); }
+#startOverlay p   { margin: 4px 0; font-size: clamp(0.85em, 3vw, 1em); }
 #startOverlay select {
   margin-top: 10px; padding: 8px 12px;
   border-radius: 8px; font-weight: bold;
+  font-size: 1em;
 }
-#startOverlay label { margin-top: 10px; }
+#startOverlay label { margin-top: 10px; font-size: 0.95em; }
 #startGameBtn {
-  margin-top: 20px; padding: 10px 24px;
+  margin-top: 20px; padding: 12px 28px;
   border-radius: 12px; border: none;
   background: #0ff; color: black;
-  font-weight: bold; font-size: 1em;
+  font-weight: bold; font-size: 1.05em;
   cursor: pointer;
   box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
   transition: transform 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 #startGameBtn:hover { transform: scale(1.06); }
 
-/* ── Game layout ── */
+/* ── Game layout: single column, centred ── */
 #gameLayout {
   display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 40px 20px;
-  gap: 20px;
-}
-
-#instructions {
-  width: 260px;
-  flex-shrink: 0;
-  font-size: 0.92em;
-  line-height: 1.5em;
-  border: 1px solid #0ff;
-  border-radius: 12px;
-  padding: 12px;
-  max-height: 80vh;
-  overflow-y: auto;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+  gap: 0;
 }
 
 #gameArea {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
 }
 
-#turnText { margin: 0 0 16px; font-size: 1.4em; text-align: center; min-height: 1.6em; }
+#turnText {
+  margin: 0 0 14px;
+  font-size: clamp(1em, 4vw, 1.4em);
+  text-align: center;
+  min-height: 1.6em;
+}
 
+/* ── Responsive grid ── */
 #gridWrapper {
   display: inline-block;
   position: relative;
@@ -82,12 +79,19 @@ body {
 
 .grid { display: grid; grid-gap: 2px; }
 
+/*
+  Cell size: fit 8 cells + 2×8px goal bars + 16px side padding into the
+  narrower of 90vw or 420px, then divide by 8. Clamp between 34px and 52px.
+*/
 .cell {
-  width: 40px; height: 40px;
+  width:  clamp(34px, calc((min(90vw, 420px) - 16px) / 8), 52px);
+  height: clamp(34px, calc((min(90vw, 420px) - 16px) / 8), 52px);
   border: 1px solid #555;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .cell:hover { border-color: #aaa; }
 .blue { background: #007bff; }
@@ -103,7 +107,7 @@ body {
   100% { box-shadow: 0 0 6px #00cc44, 0 0 12px #00cc44; }
 }
 
-/* Grid border decorations */
+/* Grid border decorations — scale thickness with cell size */
 #gridWrapper::before, #gridWrapper::after {
   content: ''; position: absolute; left: 0;
   width: 100%; height: 8px; background: #007bff; z-index: 1;
@@ -119,7 +123,7 @@ body {
 
 #winnerText {
   margin-top: 14px;
-  font-size: 1.3em;
+  font-size: clamp(1em, 4vw, 1.3em);
   font-weight: bold;
   min-height: 1.6em;
   text-align: center;
@@ -131,14 +135,58 @@ body {
   margin-top: 16px;
 }
 #controls button {
-  padding: 8px 16px;
+  padding: 10px 18px;
   border: none; border-radius: 12px;
   background: #0ff; color: black;
   font-weight: bold; cursor: pointer;
+  font-size: clamp(0.85em, 3.5vw, 1em);
   box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
   transition: transform 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-height: 44px;
 }
 #controls button:hover { transform: scale(1.05); }
+
+/* ── Collapsible instructions below board ── */
+#infoSection {
+  width: 100%;
+  max-width: 460px;
+  margin-top: 28px;
+}
+
+#infoToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid #0ff;
+  border-radius: 12px;
+  color: #0ff;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background 0.2s;
+}
+#infoToggle:hover { background: rgba(0,255,255,0.08); }
+#infoToggle .arrow { transition: transform 0.25s; font-size: 0.85em; }
+#infoToggle.open .arrow { transform: rotate(180deg); }
+
+#instructions {
+  display: none;
+  font-size: 0.92em;
+  line-height: 1.6em;
+  border: 1px solid #0ff;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  padding: 14px 16px;
+  background: rgba(0,255,255,0.04);
+}
+#instructions.open { display: block; }
 </style>
 </head>
 <body>
@@ -170,23 +218,6 @@ body {
 
 <!-- ── Game area ── -->
 <div id="gameLayout">
-  <div id="instructions">
-    <h3 style="margin-top:0">Game Instructions</h3>
-    <p>I vibe coded this game with the help of ChatGPT and Claude based on a game available in the Mustang Mach-E. The goal is to connect your side of the board to the opposite side using your colour tiles.</p>
-    <ul>
-      <li><strong>Player 1 (Blue):</strong> connect top to bottom</li>
-      <li><strong>Player 2 (Red):</strong> connect left to right</li>
-    </ul>
-    <p><strong>Rules:</strong></p>
-    <ul>
-      <li>Click an empty square to place your tile.</li>
-      <li>Tiles only connect via flat sides — diagonals do not count.</li>
-      <li>First to complete a bridge wins. The winning path lights up green.</li>
-      <li>Reset anytime with the Reset button.</li>
-      <li>Toggle background music with the Mute button.</li>
-    </ul>
-  </div>
-
   <div id="gameArea">
     <div id="turnText"></div>
     <div id="gridWrapper">
@@ -199,6 +230,27 @@ body {
       <button id="resetBtn">Reset Game</button>
       <button id="muteBtn">Mute</button>
     </div>
+
+    <!-- Collapsible instructions below the board -->
+    <div id="infoSection">
+      <button id="infoToggle">How to Play <span class="arrow">▼</span></button>
+      <div id="instructions">
+        <p>Connect your side of the board to the opposite side using your colour tiles.</p>
+        <ul>
+          <li><strong>Player 1 (Blue):</strong> connect top to bottom</li>
+          <li><strong>Player 2 (Red):</strong> connect left to right</li>
+        </ul>
+        <p><strong>Rules:</strong></p>
+        <ul>
+          <li>Tap an empty square to place your tile.</li>
+          <li>Tiles only connect via flat sides — diagonals do not count.</li>
+          <li>First to complete a bridge wins. The winning path lights up green.</li>
+          <li>Reset anytime with the Reset button.</li>
+          <li>Toggle background music with the Mute button.</li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -212,6 +264,8 @@ const muteBtn = document.getElementById('muteBtn');
 // ── Web Audio click (lazy init) ───────────────────────────────────────────────
 let audioCtx = null;
 function playClick() {
+  // Haptic feedback — works on Android; silently ignored on iOS/desktop
+  if (navigator.vibrate) navigator.vibrate(18);
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const osc  = audioCtx.createOscillator();
@@ -581,22 +635,4 @@ function glowWinningTiles(p) {
     }
     for (const [gr, gc] of reached) {
       let cur = [gr, gc];
-      while (cur) { onPath.add(`${cur[0]}-${cur[1]}`); cur = prev[`${cur[0]}-${cur[1]}`]; }
-    }
-  }
-  if (p === 1) { for (let c = 0; c < GRID_SIZE; c++) if (grid[0][c] === p) bfs(0, c); }
-  else         { for (let r = 0; r < GRID_SIZE; r++) if (grid[r][0] === p) bfs(r, 0); }
-
-  const el = document.getElementById('grid');
-  for (let r = 0; r < GRID_SIZE; r++)
-    for (let c = 0; c < GRID_SIZE; c++)
-      if (onPath.has(`${r}-${c}`)) el.children[r * GRID_SIZE + c].classList.add('win-path');
-}
-
-// ── Button wiring ─────────────────────────────────────────────────────────────
-document.getElementById('startGameBtn').addEventListener('click', startGame);
-document.getElementById('resetBtn').addEventListener('click', resetGame);
-document.getElementById('muteBtn').addEventListener('click', toggleMusic);
-</script>
-</body>
-</html>
+      while (cur) { onPath.add(`${cur[0]}-${cur[1]}`); cur = prev[`${cu
