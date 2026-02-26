@@ -101,10 +101,10 @@ body {
 
 <div id="instructions">
   <h3>Game Instructions</h3>
-  <p>Objective: Connect your side of the board to the opposite side using your color tiles. Even if the corners of the tiles are touching, you win. </p>
+  <p>Objective: Connect your side of the board to the opposite side using your color tiles.</p>
   <ul>
-    <li>Player 1 (Blue): Connect Top to Bottom</li>
-    <li>Player 2 (Red): Connect Left to Right</li>
+    <li>Player 1 (Blue): connect top to bottom</li>
+    <li>Player 2 (Red): connect left to right</li>
   </ul>
   <p>Gameplay:</p>
   <ul>
@@ -167,6 +167,7 @@ function renderGrid() {
       cell.classList.add('cell');
       if (grid[r][c] === 1) cell.classList.add('blue');
       if (grid[r][c] === 2) cell.classList.add('red');
+      cell.style.animation = ''; // clear any winning glow from previous game
       cell.addEventListener('click', () => handleClick(r, c));
       gridEl.appendChild(cell);
     }
@@ -236,7 +237,7 @@ function findWinningMove(p) {
 }
 
 function countAdjacent(r, c, p) {
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; // flat sides only
   let n = 0;
   for (const [dr, dc] of dirs) {
     const nr = r + dr, nc = c + dc;
@@ -255,7 +256,7 @@ function countAdjacent(r, c, p) {
 function shortestPath(p) {
   const opp = p === 1 ? 2 : 1;
   const dist = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(Infinity));
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; // flat sides only — no diagonals
   const pq = [];
 
   if (p === 1) {
@@ -465,14 +466,67 @@ function sortedCandidates(p, limit = 12) {
     .map(({ r, c }) => [r, c]);
 }
 
+/**
+ * Finds the set of cells that form the winning path for player p,
+ * then applies a neon glow animation to only those cells.
+ * Uses BFS to trace a connected path from the start edge to the goal edge.
+ */
 function glowWinningTiles(p) {
-  const gridEl = document.getElementById('grid');
-  for (let r = 0; r < GRID_SIZE; r++)
-    for (let c = 0; c < GRID_SIZE; c++)
-      if (grid[r][c] === p) {
-        const cell = gridEl.children[r * GRID_SIZE + c];
-        cell.style.animation = p === 1 ? 'neonBlue 1s infinite alternate' : 'neonRed 1s infinite alternate';
+  // BFS to find ALL cells on any winning path from start-edge to goal-edge
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const onWinningPath = new Set();
+
+  // For each start-edge cell belonging to p, do a BFS and record
+  // every cell that lies on a path that reaches the goal edge.
+  function bfsPath(startR, startC) {
+    // BFS tracking predecessors so we can reconstruct the path
+    const prev = {};
+    const queue = [[startR, startC]];
+    prev[`${startR}-${startC}`] = null;
+    let reached = [];
+
+    while (queue.length > 0) {
+      const [r, c] = queue.shift();
+      const atGoal = (p === 1 && r === GRID_SIZE - 1) || (p === 2 && c === GRID_SIZE - 1);
+      if (atGoal) reached.push([r, c]);
+      for (const [dr, dc] of dirs) {
+        const nr = r + dr, nc = c + dc;
+        const key = `${nr}-${nc}`;
+        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE
+            && grid[nr][nc] === p && !(key in prev)) {
+          prev[key] = [r, c];
+          queue.push([nr, nc]);
+        }
       }
+    }
+    // Trace back from each goal cell to mark the path
+    for (const [gr, gc] of reached) {
+      let cur = [gr, gc];
+      while (cur !== null) {
+        onWinningPath.add(`${cur[0]}-${cur[1]}`);
+        cur = prev[`${cur[0]}-${cur[1]}`];
+      }
+    }
+  }
+
+  if (p === 1) {
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (grid[0][c] === p) bfsPath(0, c);
+  } else {
+    for (let r = 0; r < GRID_SIZE; r++)
+      if (grid[r][0] === p) bfsPath(r, 0);
+  }
+
+  // Apply glow only to winning-path cells
+  const gridEl = document.getElementById('grid');
+  const anim = p === 1 ? 'neonBlue 1s infinite alternate' : 'neonRed 1s infinite alternate';
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (onWinningPath.has(`${r}-${c}`)) {
+        gridEl.children[r * GRID_SIZE + c].style.animation = anim;
+      }
+    }
+  }
 }
 
 function resetGame() { createGrid(); renderGrid(); updateTurnText(); }
@@ -486,7 +540,7 @@ function checkWin(p) {
     visited.add(key);
     if (p === 1 && r === GRID_SIZE - 1) { found = true; return true; }
     if (p === 2 && c === GRID_SIZE - 1) { found = true; return true; }
-    const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; // flat sides only — no diagonals
     for (const [dr, dc] of dirs) {
       const nr = r + dr, nc = c + dc;
       if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === p)
