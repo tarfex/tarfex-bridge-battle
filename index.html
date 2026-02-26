@@ -46,8 +46,10 @@ body {
 .cell { width:40px; height:40px; border:1px solid #555; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
 .blue { background:#007bff; }
 .red { background:#ff3333; }
+.win-path { background:#00cc44 !important; animation: neonGreen 1s infinite alternate !important; }
 @keyframes neonBlue { 0% { box-shadow:0 0 5px #007bff;} 50% { box-shadow:0 0 20px #00f;} 100% { box-shadow:0 0 5px #007bff;} }
 @keyframes neonRed { 0% { box-shadow:0 0 5px #ff3333;} 50% { box-shadow:0 0 20px #f00;} 100% { box-shadow:0 0 5px #ff3333;} }
+@keyframes neonGreen { 0% { box-shadow:0 0 6px #00cc44, 0 0 12px #00cc44;} 50% { box-shadow:0 0 18px #00ff55, 0 0 35px #00ff55;} 100% { box-shadow:0 0 6px #00cc44, 0 0 12px #00cc44;} }
 
 #gridWrapper::before,#gridWrapper::after{content:'';position:absolute;left:0;width:100%;height:8px;background:#007bff;z-index:1;}
 #gridWrapper::before{top:-8px;border-radius:4px 4px 0 0;}
@@ -137,6 +139,25 @@ let grid = [], player = 1, winner = null, vsAI = false, difficulty = 2;
 const music = document.getElementById('bgMusic');
 const muteBtn = document.getElementById('muteBtn');
 
+// ─── CLICK SOUND (Web Audio API — no external file needed) ───────────────────
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playClick() {
+  try {
+    const osc    = audioCtx.createOscillator();
+    const gain   = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.07);
+  } catch(e) {}
+}
+
 function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   vsAI = document.getElementById('modeSelect').value === 'ai';
@@ -167,7 +188,8 @@ function renderGrid() {
       cell.classList.add('cell');
       if (grid[r][c] === 1) cell.classList.add('blue');
       if (grid[r][c] === 2) cell.classList.add('red');
-      cell.style.animation = ''; // clear any winning glow from previous game
+      cell.style.animation = ''; // clear any leftover inline animation
+      // (win-path is cleared automatically since we rebuild innerHTML from scratch)
       cell.addEventListener('click', () => handleClick(r, c));
       gridEl.appendChild(cell);
     }
@@ -180,6 +202,7 @@ function updateTurnText() {
 
 function handleClick(r, c) {
   if (grid[r][c] !== 0 || winner || (vsAI && player === 2)) return;
+  playClick();
   grid[r][c] = player;
   if (checkWin(player)) {
     winner = player;
@@ -201,6 +224,7 @@ function aiMove() {
   else                       move = hardMove();
 
   const [r, c] = move;
+  playClick();
   grid[r][c] = 2;
   if (checkWin(2)) {
     winner = 2;
@@ -517,13 +541,14 @@ function glowWinningTiles(p) {
       if (grid[r][0] === p) bfsPath(r, 0);
   }
 
-  // Apply glow only to winning-path cells
+  // Apply green win-path class only to winning-path cells
   const gridEl = document.getElementById('grid');
-  const anim = p === 1 ? 'neonBlue 1s infinite alternate' : 'neonRed 1s infinite alternate';
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       if (onWinningPath.has(`${r}-${c}`)) {
-        gridEl.children[r * GRID_SIZE + c].style.animation = anim;
+        const cell = gridEl.children[r * GRID_SIZE + c];
+        cell.classList.add('win-path');
+        cell.style.animation = ''; // let CSS class handle the animation
       }
     }
   }
