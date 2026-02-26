@@ -360,11 +360,13 @@ function mediumMove() {
 }
 
 // ─── HARD ────────────────────────────────────────────────────────────────────
-// Minimax with alpha-beta pruning, depth 3.
-// Early game shortcut: if more than half the board is empty, use greedy
-// (the tree is too wide to search meaningfully at depth 3 this early and
-// the greedy heuristic is already very strong on an open board).
-// Mid/late game: full minimax at depth 3 with top-12 move ordering.
+// Minimax with alpha-beta pruning.
+// Depth scales with game phase:
+//   - Early game (>44 empty): depth 2 — board too open for deep search to add value,
+//     but still thinks 2 plies (not greedy). Fast and positionally sound.
+//   - Mid game (>20 empty):   depth 3 — strong lookahead, manageable speed.
+//   - Late game (≤20 empty):  depth 4 — maximum strength when it matters most.
+// Candidate list capped at 10 per node for speed.
 
 function hardMove() {
   // 1. Instant win
@@ -376,21 +378,14 @@ function hardMove() {
   if (block) return block;
 
   const empty = getEmpty();
+  const depth = empty.length > 44 ? 2 : empty.length > 20 ? 3 : 4;
 
-  // Early game shortcut: greedy is sufficient and much faster
-  if (empty.length > 36) {
-    const candidates = sortedCandidates(2);
-    return candidates[0] || empty[0];
-  }
-
-  // Mid/late game: minimax depth 3
-  const DEPTH = 3;
   let bestMove = null, bestScore = -Infinity;
   let alpha = -Infinity, beta = Infinity;
 
-  for (const [r, c] of sortedCandidates(2)) {
+  for (const [r, c] of sortedCandidates(2, 10)) {
     grid[r][c] = 2;
-    const score = minimax(DEPTH - 1, false, alpha, beta);
+    const score = minimax(depth - 1, false, alpha, beta);
     grid[r][c] = 0;
     if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
     if (bestScore > alpha) alpha = bestScore;
@@ -453,10 +448,10 @@ function evaluate() {
 }
 
 /**
- * Returns up to 12 empty cells sorted best-first for player p,
+ * Returns up to `limit` empty cells sorted best-first for player p,
  * scored by single-ply path differential.
  */
-function sortedCandidates(p) {
+function sortedCandidates(p, limit = 12) {
   const opp = p === 1 ? 2 : 1;
   return getEmpty()
     .map(([r, c]) => {
@@ -466,7 +461,7 @@ function sortedCandidates(p) {
       return { r, c, score };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 12)
+    .slice(0, limit)
     .map(({ r, c }) => [r, c]);
 }
 
