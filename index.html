@@ -311,105 +311,106 @@ function easyMove() {
   return empty[Math.floor(Math.random() * empty.length)];
 }
 
-// ─── MEDIUM ──────────────────────────────────────────────────────────────────
-// Blocks immediate loss AND takes an immediate win.
-// Offensive strategy: score cells by own shortest-path improvement + adjacency.
-// Defensive awareness: also scores how much a cell hurts the opponent's path.
-// Uses a 60/40 weighted blend of offence vs defence to stay beatable.
+
+// Win immediately → block immediately → 2-ply lookahead:
+//   For each AI candidate move, simulate the human's single best response,
+//   then score the resulting board. This makes medium anticipate your reply
+//   without the full cost of deep minimax.
 function mediumMove() {
-  // 1. Take the win immediately
   const win = findWinningMove(2);
   if (win) return win;
 
-  // 2. Block the human's immediate win
   const block = findWinningMove(1);
   if (block) return block;
 
-  // 3. Score every empty cell
-  const baseMy  = shortestPath(2);
-  const baseOpp = shortestPath(1);
+  const candidates = sortedCandidates(2); // pre-sorted by greedy, top 12
 
-  const candidates = getEmpty().map(([r, c]) => {
-    // Offensive score: how much this move shortens our own path
-    grid[r][c] = 2;
-    const myImprove = baseMy - shortestPath(2);   // positive = good for us
-    grid[r][c] = 0;
-
-    // Defensive score: how much this move lengthens opponent's path
-    grid[r][c] = 1;
-    const oppHurt = shortestPath(1) - baseOpp;    // positive = bad for opponent
-    grid[r][c] = 0;
-
-    // 60% offence, 40% defence — beatable but not trivial
-    const score = (0.6 * myImprove) + (0.4 * oppHurt)
-                + (countAdjacent(r, c, 2) * 0.5)  // small chain bonus
-                + (Math.random() * 0.4);            // jitter to avoid determinism
-    return { r, c, score };
-  });
-
-  candidates.sort((a, b) => b.score - a.score);
-  return [candidates[0].r, candidates[0].c];
-}
-
-// ─── HARD ────────────────────────────────────────────────────────────────────
-// Uses minimax with alpha-beta pruning and iterative deepening.
-// Evaluation: shortestPath(human) - shortestPath(AI)
-//   → AI wants this to be as HIGH as possible (human path long, AI path short)
-// Searches 4 plies deep (AI, human, AI, human), pruning branches that can't
-// improve. Candidate moves are pre-sorted by the greedy heuristic so the best
-// branches are explored first, maximising alpha-beta cutoffs.
-
-const HARD_DEPTH = 4; // plies to search (must be even so AI has last say)
-
-function hardMove() {
-  // 1. Instant win — always take it
-  const win = findWinningMove(2);
-  if (win) return win;
-
-  // 2. Instant block — always do it
-  const block = findWinningMove(1);
-  if (block) return block;
-
-  // 3. Minimax search
-  let bestMove = null;
-  let bestScore = -Infinity;
-  const alpha0 = -Infinity;
-  const beta0  =  Infinity;
-
-  // Sort candidates by greedy heuristic so strong moves are tried first,
-  // giving alpha-beta the best chance to prune weak branches early.
-  const candidates = sortedCandidates(2);
+  let bestMove = null, bestScore = -Infinity;
 
   for (const [r, c] of candidates) {
     grid[r][c] = 2;
-    // After AI plays, it's human's turn → minimising node
-    const score = minimax(HARD_DEPTH - 1, false, alpha0, beta0);
+
+    // Simulate the human's best single reply (greedy, no deep search)
+    let scoreAfterReply;
+    const humanWin = findWinningMove(1);
+    if (humanWin) {
+      // Human can win immediately after our move — very bad
+      scoreAfterReply = -5000;
+    } else {
+      // Human plays their greedy-best cell
+      const humanCandidates = sortedCandidates(1);
+      if (humanCandidates.length > 0) {
+        const [hr, hc] = humanCandidates[0];
+        grid[hr][hc] = 1;
+        scoreAfterReply = evaluate();
+        grid[hr][hc] = 0;
+      } else {
+        scoreAfterReply = evaluate();
+      }
+    }
+
     grid[r][c] = 0;
+
+    // Small jitter so medium isn't perfectly deterministic
+    const score = scoreAfterReply + (Math.random() * 0.3);
     if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
   }
 
   return bestMove || getEmpty()[0];
 }
 
+// ─── HARD ────────────────────────────────────────────────────────────────────
+// Minimax with alpha-beta pruning, depth 3.
+// Early game shortcut: if more than half the board is empty, use greedy
+// (the tree is too wide to search meaningfully at depth 3 this early and
+// the greedy heuristic is already very strong on an open board).
+// Mid/late game: full minimax at depth 3 with top-12 move ordering.
+
+function hardMove() {
+  // 1. Instant win
+  const win = findWinningMove(2);
+  if (win) return win;
+
+  // 2. Instant block
+  const block = findWinningMove(1);
+  if (block) return block;
+
+  const empty = getEmpty();
+
+  // Early game shortcut: greedy is sufficient and much faster
+  if (empty.length > 36) {
+    const candidates = sortedCandidates(2);
+    return candidates[0] || empty[0];
+  }
+
+  // Mid/late game: minimax depth 3
+  const DEPTH = 3;
+  let bestMove = null, bestScore = -Infinity;
+  let alpha = -Infinity, beta = Infinity;
+
+  for (const [r, c] of sortedCandidates(2)) {
+    grid[r][c] = 2;
+    const score = minimax(DEPTH - 1, false, alpha, beta);
+    grid[r][c] = 0;
+    if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
+    if (bestScore > alpha) alpha = bestScore;
+  }
+
+  return bestMove || empty[0];
+}
+
 /**
  * Minimax with alpha-beta pruning.
- * @param {number} depth   - plies remaining
- * @param {boolean} isMax  - true = AI's turn (maximising), false = human's turn (minimising)
- * @param {number} alpha   - best score AI is guaranteed so far
- * @param {number} beta    - best score human is guaranteed so far
+ * isMax=true → AI's turn (maximising), isMax=false → human's turn (minimising).
  */
 function minimax(depth, isMax, alpha, beta) {
-  // Terminal: win/loss
-  if (checkWin(2)) return  10000 + depth; // AI won — prefer faster wins
-  if (checkWin(1)) return -10000 - depth; // Human won — prefer slower losses
-
-  // Leaf node: use path-differential heuristic
-  if (depth === 0) return evaluate();
+  if (checkWin(2)) return  10000 + depth;
+  if (checkWin(1)) return -10000 - depth;
+  if (depth === 0)  return evaluate();
 
   const empty = getEmpty();
   if (empty.length === 0) return evaluate();
 
-  // Sort moves so best ones are tried first for better pruning
   const candidates = isMax ? sortedCandidates(2) : sortedCandidates(1);
 
   if (isMax) {
@@ -420,7 +421,7 @@ function minimax(depth, isMax, alpha, beta) {
       grid[r][c] = 0;
       if (score > best) best = score;
       if (best > alpha) alpha = best;
-      if (alpha >= beta) break; // β cut-off
+      if (alpha >= beta) break;
     }
     return best;
   } else {
@@ -431,38 +432,29 @@ function minimax(depth, isMax, alpha, beta) {
       grid[r][c] = 0;
       if (score < best) best = score;
       if (best < beta) beta = best;
-      if (beta <= alpha) break; // α cut-off
+      if (beta <= alpha) break;
     }
     return best;
   }
 }
 
 /**
- * Board evaluation: positive = good for AI (red), negative = good for human (blue).
- * Primary: human's shortest path minus AI's shortest path.
- * Bonus: penalise the human heavily if their path is very short (danger signal),
- *        reward the AI if its path is very short (near win).
+ * Board score: positive = good for AI, negative = good for human.
+ * Uses path differential with urgency scaling in the endgame.
  */
 function evaluate() {
   const myPath  = shortestPath(2);
   const oppPath = shortestPath(1);
-
-  // If either path is Infinity (completely blocked) treat as near-win/loss
   const myScore  = myPath  === Infinity ?  100 : myPath;
   const oppScore = oppPath === Infinity ? -100 : oppPath;
-
-  // Extra urgency weight when paths are short (endgame matters more)
-  const urgency = Math.max(0, 6 - myScore);  // ramps up as AI gets close
-  const danger  = Math.max(0, 6 - oppScore); // ramps up as human gets close
-
+  const urgency = Math.max(0, 6 - myScore);
+  const danger  = Math.max(0, 6 - oppScore);
   return (oppScore - myScore) + (urgency * 0.5) - (danger * 1.2);
 }
 
 /**
- * Returns empty cells sorted by how good they look for player p
- * using a fast single-ply path-differential — best moves first,
- * so alpha-beta prunes more aggressively.
- * Limited to top 18 candidates to keep search tree tractable.
+ * Returns up to 12 empty cells sorted best-first for player p,
+ * scored by single-ply path differential.
  */
 function sortedCandidates(p) {
   const opp = p === 1 ? 2 : 1;
@@ -474,7 +466,7 @@ function sortedCandidates(p) {
       return { r, c, score };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 18)
+    .slice(0, 12)
     .map(({ r, c }) => [r, c]);
 }
 
