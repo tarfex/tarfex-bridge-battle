@@ -352,46 +352,130 @@ function mediumMove() {
 }
 
 // ─── HARD ────────────────────────────────────────────────────────────────────
-// Blocks immediate loss AND takes immediate win.
-// Full shortest-path evaluation: picks the move that maximises
-//   (opponent's new path length) - (own new path length)
-// weighted 50/50, making it play both sides of the board optimally.
-// Also looks one move ahead for "near-win" threats (opponent 1 move from winning).
+// Uses minimax with alpha-beta pruning and iterative deepening.
+// Evaluation: shortestPath(human) - shortestPath(AI)
+//   → AI wants this to be as HIGH as possible (human path long, AI path short)
+// Searches 4 plies deep (AI, human, AI, human), pruning branches that can't
+// improve. Candidate moves are pre-sorted by the greedy heuristic so the best
+// branches are explored first, maximising alpha-beta cutoffs.
+
+const HARD_DEPTH = 4; // plies to search (must be even so AI has last say)
+
 function hardMove() {
-  // 1. Take the win immediately
+  // 1. Instant win — always take it
   const win = findWinningMove(2);
   if (win) return win;
 
-  // 2. Block the human's immediate win
+  // 2. Instant block — always do it
   const block = findWinningMove(1);
   if (block) return block;
 
-  // 3. Block any move where the human would be 1 step from winning next turn
-  // (i.e. if human plays X and then has a winning move, block X now)
-  for (const [r, c] of getEmpty()) {
-    grid[r][c] = 1; // simulate human playing here
-    const threat = findWinningMove(1); // would human then have a winning follow-up?
-    grid[r][c] = 0;
-    if (threat) {
-      // Playing here ourselves blocks the setup
-      return [r, c];
-    }
-  }
+  // 3. Minimax search
+  let bestMove = null;
+  let bestScore = -Infinity;
+  const alpha0 = -Infinity;
+  const beta0  =  Infinity;
 
-  // 4. Full path-differential evaluation
-  let bestMove = null, bestScore = -Infinity;
-  for (const [r, c] of getEmpty()) {
+  // Sort candidates by greedy heuristic so strong moves are tried first,
+  // giving alpha-beta the best chance to prune weak branches early.
+  const candidates = sortedCandidates(2);
+
+  for (const [r, c] of candidates) {
     grid[r][c] = 2;
-    const myPath  = shortestPath(2);
-    const oppPath = shortestPath(1);
+    // After AI plays, it's human's turn → minimising node
+    const score = minimax(HARD_DEPTH - 1, false, alpha0, beta0);
     grid[r][c] = 0;
-
-    // Equal weight on shortening own path and lengthening opponent's
-    const score = oppPath - myPath;
     if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
   }
 
   return bestMove || getEmpty()[0];
+}
+
+/**
+ * Minimax with alpha-beta pruning.
+ * @param {number} depth   - plies remaining
+ * @param {boolean} isMax  - true = AI's turn (maximising), false = human's turn (minimising)
+ * @param {number} alpha   - best score AI is guaranteed so far
+ * @param {number} beta    - best score human is guaranteed so far
+ */
+function minimax(depth, isMax, alpha, beta) {
+  // Terminal: win/loss
+  if (checkWin(2)) return  10000 + depth; // AI won — prefer faster wins
+  if (checkWin(1)) return -10000 - depth; // Human won — prefer slower losses
+
+  // Leaf node: use path-differential heuristic
+  if (depth === 0) return evaluate();
+
+  const empty = getEmpty();
+  if (empty.length === 0) return evaluate();
+
+  // Sort moves so best ones are tried first for better pruning
+  const candidates = isMax ? sortedCandidates(2) : sortedCandidates(1);
+
+  if (isMax) {
+    let best = -Infinity;
+    for (const [r, c] of candidates) {
+      grid[r][c] = 2;
+      const score = minimax(depth - 1, false, alpha, beta);
+      grid[r][c] = 0;
+      if (score > best) best = score;
+      if (best > alpha) alpha = best;
+      if (alpha >= beta) break; // β cut-off
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const [r, c] of candidates) {
+      grid[r][c] = 1;
+      const score = minimax(depth - 1, true, alpha, beta);
+      grid[r][c] = 0;
+      if (score < best) best = score;
+      if (best < beta) beta = best;
+      if (beta <= alpha) break; // α cut-off
+    }
+    return best;
+  }
+}
+
+/**
+ * Board evaluation: positive = good for AI (red), negative = good for human (blue).
+ * Primary: human's shortest path minus AI's shortest path.
+ * Bonus: penalise the human heavily if their path is very short (danger signal),
+ *        reward the AI if its path is very short (near win).
+ */
+function evaluate() {
+  const myPath  = shortestPath(2);
+  const oppPath = shortestPath(1);
+
+  // If either path is Infinity (completely blocked) treat as near-win/loss
+  const myScore  = myPath  === Infinity ?  100 : myPath;
+  const oppScore = oppPath === Infinity ? -100 : oppPath;
+
+  // Extra urgency weight when paths are short (endgame matters more)
+  const urgency = Math.max(0, 6 - myScore);  // ramps up as AI gets close
+  const danger  = Math.max(0, 6 - oppScore); // ramps up as human gets close
+
+  return (oppScore - myScore) + (urgency * 0.5) - (danger * 1.2);
+}
+
+/**
+ * Returns empty cells sorted by how good they look for player p
+ * using a fast single-ply path-differential — best moves first,
+ * so alpha-beta prunes more aggressively.
+ * Limited to top 18 candidates to keep search tree tractable.
+ */
+function sortedCandidates(p) {
+  const opp = p === 1 ? 2 : 1;
+  return getEmpty()
+    .map(([r, c]) => {
+      grid[r][c] = p;
+      const score = shortestPath(opp) - shortestPath(p);
+      grid[r][c] = 0;
+      return { r, c, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 18)
+    .map(({ r, c }) => [r, c]);
 }
 
 function glowWinningTiles(p) {
