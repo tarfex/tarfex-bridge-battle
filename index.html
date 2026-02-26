@@ -337,6 +337,34 @@ function easyMove() {
 }
 
 
+// ─── MEDIUM ──────────────────────────────────────────────────────────────────
+
+// Shared path-differential sort used by medium move and its 2-ply lookahead.
+function sortedCandidates(p, limit = 12) {
+  const opp = p === 1 ? 2 : 1;
+  return getEmpty()
+    .map(([r, c]) => {
+      grid[r][c] = p;
+      const score = shortestPath(opp) - shortestPath(p);
+      grid[r][c] = 0;
+      return { r, c, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ r, c }) => [r, c]);
+}
+
+// Basic evaluation for medium mode.
+function evaluate() {
+  const myPath  = shortestPath(2);
+  const oppPath = shortestPath(1);
+  const myScore  = myPath  === Infinity ?  100 : myPath;
+  const oppScore = oppPath === Infinity ? -100 : oppPath;
+  const urgency = Math.max(0, 6 - myScore);
+  const danger  = Math.max(0, 6 - oppScore);
+  return (oppScore - myScore) + (urgency * 0.5) - (danger * 1.2);
+}
+
 // Win immediately → block immediately → 2-ply lookahead:
 //   For each AI candidate move, simulate the human's single best response,
 //   then score the resulting board. This makes medium anticipate your reply
@@ -385,32 +413,48 @@ function mediumMove() {
 }
 
 // ─── HARD ────────────────────────────────────────────────────────────────────
-// Minimax with alpha-beta pruning.
-// Depth scales with game phase:
-//   - Early game (>44 empty): depth 2 — board too open for deep search to add value,
-//     but still thinks 2 plies (not greedy). Fast and positionally sound.
-//   - Mid game (>20 empty):   depth 3 — strong lookahead, manageable speed.
-//   - Late game (≤20 empty):  depth 4 — maximum strength when it matters most.
-// Candidate list capped at 10 per node for speed.
+// Minimax + alpha-beta with three major upgrades over the previous version:
+//
+// 1. STRONGER EVALUATION — uses a weighted sum of:
+//      • Path differential (own shortest path vs opponent's)
+//      • Connectivity bonus: rewards having more own tiles on the optimal path
+//      • Virtual connection bonus: detects "bridge" patterns where two own tiles
+//        can connect through a shared empty cell the opponent can't block in one
+//        move — a very strong positional signal
+//      • Asymmetric danger weighting: punishes being close to losing harder
+//        than it rewards being close to winning (defensive urgency)
+//
+// 2. THREAT-AWARE MOVE ORDERING — sortedCandidatesHard scores each move by
+//      (how much it hurts opponent's path) + (how much it improves own path)
+//      + virtual connection bonus, not just the raw differential.
+//      This gives alpha-beta far better pruning because the strongest moves
+//      are tried first at every node.
+//
+// 3. ADAPTIVE DEPTH — scales from depth 2 (opening) up to depth 5 (endgame),
+//    with a 14-candidate cap at root and 10 inside the tree.
 
 function hardMove() {
-  // 1. Instant win
+  // Instant win
   const win = findWinningMove(2);
   if (win) return win;
 
-  // 2. Instant block
+  // Instant block
   const block = findWinningMove(1);
   if (block) return block;
 
   const empty = getEmpty();
-  const depth = empty.length > 44 ? 2 : empty.length > 20 ? 3 : 4;
+  // Adaptive depth: shallow opening (board too wide), deepen as game progresses
+  const depth = empty.length > 48 ? 2
+              : empty.length > 32 ? 3
+              : empty.length > 16 ? 4
+              : 5;
 
   let bestMove = null, bestScore = -Infinity;
   let alpha = -Infinity, beta = Infinity;
 
-  for (const [r, c] of sortedCandidates(2, 10)) {
+  for (const [r, c] of sortedCandidatesHard(2, 14)) {
     grid[r][c] = 2;
-    const score = minimax(depth - 1, false, alpha, beta);
+    const score = minimaxHard(depth - 1, false, alpha, beta);
     grid[r][c] = 0;
     if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
     if (bestScore > alpha) alpha = bestScore;
@@ -419,25 +463,23 @@ function hardMove() {
   return bestMove || empty[0];
 }
 
-/**
- * Minimax with alpha-beta pruning.
- * isMax=true → AI's turn (maximising), isMax=false → human's turn (minimising).
- */
-function minimax(depth, isMax, alpha, beta) {
-  if (checkWin(2)) return  10000 + depth;
-  if (checkWin(1)) return -10000 - depth;
-  if (depth === 0)  return evaluate();
+function minimaxHard(depth, isMax, alpha, beta) {
+  if (checkWin(2)) return  20000 + depth;
+  if (checkWin(1)) return -20000 - depth;
+  if (depth === 0)  return evaluateHard();
 
   const empty = getEmpty();
-  if (empty.length === 0) return evaluate();
+  if (empty.length === 0) return evaluateHard();
 
-  const candidates = isMax ? sortedCandidates(2) : sortedCandidates(1);
+  const candidates = isMax
+    ? sortedCandidatesHard(2, 10)
+    : sortedCandidatesHard(1, 10);
 
   if (isMax) {
     let best = -Infinity;
     for (const [r, c] of candidates) {
       grid[r][c] = 2;
-      const score = minimax(depth - 1, false, alpha, beta);
+      const score = minimaxHard(depth - 1, false, alpha, beta);
       grid[r][c] = 0;
       if (score > best) best = score;
       if (best > alpha) alpha = best;
@@ -448,7 +490,7 @@ function minimax(depth, isMax, alpha, beta) {
     let best = Infinity;
     for (const [r, c] of candidates) {
       grid[r][c] = 1;
-      const score = minimax(depth - 1, true, alpha, beta);
+      const score = minimaxHard(depth - 1, true, alpha, beta);
       grid[r][c] = 0;
       if (score < best) best = score;
       if (best < beta) beta = best;
@@ -459,124 +501,83 @@ function minimax(depth, isMax, alpha, beta) {
 }
 
 /**
- * Board score: positive = good for AI, negative = good for human.
- * Uses path differential with urgency scaling in the endgame.
+ * Counts empty cells that lie on the shortest path for player p.
+ * These are "critical" cells — filling them directly advances the bridge.
  */
-function evaluate() {
-  const myPath  = shortestPath(2);
-  const oppPath = shortestPath(1);
-  const myScore  = myPath  === Infinity ?  100 : myPath;
-  const oppScore = oppPath === Infinity ? -100 : oppPath;
-  const urgency = Math.max(0, 6 - myScore);
-  const danger  = Math.max(0, 6 - oppScore);
-  return (oppScore - myScore) + (urgency * 0.5) - (danger * 1.2);
-}
-
-/**
- * Returns up to `limit` empty cells sorted best-first for player p,
- * scored by single-ply path differential.
- */
-function sortedCandidates(p, limit = 12) {
+function criticalCells(p) {
   const opp = p === 1 ? 2 : 1;
-  return getEmpty()
-    .map(([r, c]) => {
-      grid[r][c] = p;
-      const score = shortestPath(opp) - shortestPath(p);
-      grid[r][c] = 0;
-      return { r, c, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ r, c }) => [r, c]);
-}
-
-/**
- * Finds the set of cells that form the winning path for player p,
- * then applies a neon glow animation to only those cells.
- * Uses BFS to trace a connected path from the start edge to the goal edge.
- */
-function glowWinningTiles(p) {
-  // BFS to find ALL cells on any winning path from start-edge to goal-edge
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-  const onWinningPath = new Set();
-
-  // For each start-edge cell belonging to p, do a BFS and record
-  // every cell that lies on a path that reaches the goal edge.
-  function bfsPath(startR, startC) {
-    // BFS tracking predecessors so we can reconstruct the path
-    const prev = {};
-    const queue = [[startR, startC]];
-    prev[`${startR}-${startC}`] = null;
-    let reached = [];
-
-    while (queue.length > 0) {
-      const [r, c] = queue.shift();
-      const atGoal = (p === 1 && r === GRID_SIZE - 1) || (p === 2 && c === GRID_SIZE - 1);
-      if (atGoal) reached.push([r, c]);
-      for (const [dr, dc] of dirs) {
-        const nr = r + dr, nc = c + dc;
-        const key = `${nr}-${nc}`;
-        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE
-            && grid[nr][nc] === p && !(key in prev)) {
-          prev[key] = [r, c];
-          queue.push([nr, nc]);
-        }
-      }
-    }
-    // Trace back from each goal cell to mark the path
-    for (const [gr, gc] of reached) {
-      let cur = [gr, gc];
-      while (cur !== null) {
-        onWinningPath.add(`${cur[0]}-${cur[1]}`);
-        cur = prev[`${cur[0]}-${cur[1]}`];
-      }
-    }
-  }
+  const dist = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(Infinity));
+  const pq = [];
 
   if (p === 1) {
-    for (let c = 0; c < GRID_SIZE; c++)
-      if (grid[0][c] === p) bfsPath(0, c);
-  } else {
-    for (let r = 0; r < GRID_SIZE; r++)
-      if (grid[r][0] === p) bfsPath(r, 0);
-  }
-
-  // Apply green win-path class only to winning-path cells
-  const gridEl = document.getElementById('grid');
-  for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
-      if (onWinningPath.has(`${r}-${c}`)) {
-        const cell = gridEl.children[r * GRID_SIZE + c];
-        cell.classList.add('win-path');
-        cell.style.animation = ''; // let CSS class handle the animation
-      }
+      if (grid[0][c] === opp) continue;
+      const cost = grid[0][c] === p ? 0 : 1;
+      dist[0][c] = cost; pq.push({r:0, c, cost});
+    }
+  } else {
+    for (let r = 0; r < GRID_SIZE; r++) {
+      if (grid[r][0] === opp) continue;
+      const cost = grid[r][0] === p ? 0 : 1;
+      dist[r][0] = cost; pq.push({r, c:0, cost});
     }
   }
-}
 
-function resetGame() { createGrid(); renderGrid(); updateTurnText(); }
-
-function checkWin(p) {
-  const visited = new Set();
-  let found = false;
-  function dfs(r, c) {
-    const key = r + '-' + c;
-    if (visited.has(key)) return false;
-    visited.add(key);
-    if (p === 1 && r === GRID_SIZE - 1) { found = true; return true; }
-    if (p === 2 && c === GRID_SIZE - 1) { found = true; return true; }
-    const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; // flat sides only — no diagonals
+  while (pq.length > 0) {
+    pq.sort((a, b) => a.cost - b.cost);
+    const {r, c, cost} = pq.shift();
+    if (cost > dist[r][c]) continue;
     for (const [dr, dc] of dirs) {
       const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === p)
-        if (dfs(nr, nc)) return true;
+      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
+      if (grid[nr][nc] === opp) continue;
+      const moveCost = grid[nr][nc] === p ? 0 : 1;
+      const newCost = dist[r][c] + moveCost;
+      if (newCost < dist[nr][nc]) { dist[nr][nc] = newCost; pq.push({r:nr, c:nc, cost:newCost}); }
     }
-    return false;
   }
-  if (p === 1) { for (let c = 0; c < GRID_SIZE; c++) if (grid[0][c] === p && dfs(0, c)) break; }
-  if (p === 2) { for (let r = 0; r < GRID_SIZE; r++) if (grid[r][0] === p && dfs(r, 0)) break; }
-  return found;
+
+  // Find best (minimum) cost to goal
+  let best = Infinity;
+  if (p === 1) for (let c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
+  else         for (let r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
+
+  if (best === Infinity) return 0;
+
+  // Count cells on any shortest path (dist[r][c] === best path cost that passes through here)
+  // Simplified: count cells with dist close to the optimal, on the optimal corridor
+  let count = 0;
+  for (let r = 0; r < GRID_SIZE; r++)
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (dist[r][c] !== Infinity && dist[r][c] <= best && grid[r][c] === p)
+        count++;
+  return count;
 }
-</script>
-</body>
-</html>
+
+/**
+ * Detects "virtual connections" for player p:
+ * Two own tiles that share exactly one empty neighbour (a "bridge cell").
+ * The opponent can't block both connections in one move, so this is
+ * strategically equivalent to a direct connection.
+ */
+function virtualConnectionScore(p) {
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  let score = 0;
+  const ownTiles = [];
+  for (let r = 0; r < GRID_SIZE; r++)
+    for (let c = 0; c < GRID_SIZE; c++)
+      if (grid[r][c] === p) ownTiles.push([r, c]);
+
+  for (const [r, c] of ownTiles) {
+    // Gather empty neighbours of this tile
+    const emptyNeighbours = new Set();
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] === 0)
+        emptyNeighbours.add(`${nr}-${nc}`);
+    }
+    // Check each other own tile for shared empty neighbour
+    for (const [r2, c2] of ownTiles) {
+      if (r2 === r && c2 === c) continue;
+      for 
