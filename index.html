@@ -59,6 +59,61 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
   100% { box-shadow:0 0 6px #00cc44,0 0 14px #00cc44; }
 }
 
+/* Draw overlay */
+#drawOverlay {
+  display:none;
+  position:absolute;
+  top:0; left:0; width:100%; height:100%;
+  z-index:10;
+  border-radius:6px;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  background:rgba(0,0,0,0.72);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  animation:fadeInOverlay 0.4s ease;
+}
+#drawOverlay.visible { display:flex; }
+@keyframes fadeInOverlay {
+  from { opacity:0; transform:scale(0.92); }
+  to   { opacity:1; transform:scale(1); }
+}
+#drawLabel {
+  font-size:clamp(2em,10vw,3.2em);
+  font-weight:900;
+  letter-spacing:0.08em;
+  color:#fff;
+  text-shadow:
+    0 0 12px #fff,
+    0 0 28px #aaa,
+    0 0 48px #888;
+  animation:pulseWhite 1.4s infinite alternate;
+}
+@keyframes pulseWhite {
+  0%   { text-shadow:0 0 10px #fff,0 0 24px #aaa; }
+  100% { text-shadow:0 0 22px #fff,0 0 50px #ccc,0 0 80px #999; }
+}
+#drawSubLabel {
+  font-size:clamp(0.8em,3.5vw,1em);
+  color:#ccc;
+  text-align:center;
+  padding:0 16px;
+  line-height:1.5;
+}
+#drawResetBtn {
+  padding:11px 28px; border:none; border-radius:12px;
+  background:#0ff; color:black; font-weight:bold;
+  font-size:clamp(0.9em,3.5vw,1.05em); cursor:pointer;
+  box-shadow:0 0 10px #0ff,0 0 22px #0ff;
+  transition:transform 0.15s;
+  min-height:44px;
+  -webkit-tap-highlight-color:transparent;
+}
+#drawResetBtn:hover  { transform:scale(1.06); }
+#drawResetBtn:active { transform:scale(0.96); }
+
 #winnerText { margin-top:14px; font-size:clamp(1em,4vw,1.35em); font-weight:bold; min-height:1.7em; text-align:center; }
 
 #controls { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
@@ -120,6 +175,12 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
     <div class="leftGoal"></div>
     <div class="rightGoal"></div>
     <div id="grid" class="grid"></div>
+    <!-- Draw overlay sits inside gridWrapper so it covers only the board -->
+    <div id="drawOverlay">
+      <div id="drawLabel">DRAW</div>
+      <div id="drawSubLabel">No winning path remains<br>for either player.</div>
+      <button id="drawResetBtn">&#9654; Play Again</button>
+    </div>
   </div>
   <div id="winnerText"></div>
   <div id="controls">
@@ -139,6 +200,7 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
         <li>Tap an empty square to place your tile.</li>
         <li>Tiles only connect via flat sides — diagonals do not count.</li>
         <li>First to complete a bridge wins. The winning path lights up green.</li>
+        <li>If neither player can possibly win, the game ends in a Draw.</li>
         <li>Reset anytime. Toggle music with the Mute button.</li>
       </ul>
     </div>
@@ -147,7 +209,7 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
 
 <script>
 var GRID_SIZE = 8;
-var grid = [], player = 1, winner = null, vsAI = false, difficulty = 2;
+var grid = [], player = 1, winner = null, isDraw = false, vsAI = false, difficulty = 2;
 var music   = document.getElementById('bgMusic');
 var muteBtn = document.getElementById('muteBtn');
 var audioCtx = null;
@@ -175,7 +237,6 @@ function startGame() {
     difficulty = parseInt(document.getElementById('difficultySelect').value);
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameScreen').style.display  = 'flex';
-    // Safely attempt to play music — don't let failure block the game
     try {
       var p = music.play();
       if (p && typeof p.catch === 'function') p.catch(function(){});
@@ -190,9 +251,10 @@ function startGame() {
 }
 
 function createGrid() {
-  grid = []; player = 1; winner = null;
+  grid = []; player = 1; winner = null; isDraw = false;
   for (var r = 0; r < GRID_SIZE; r++) { grid[r] = []; for (var c = 0; c < GRID_SIZE; c++) grid[r][c] = 0; }
   document.getElementById('winnerText').innerText = '';
+  hideDraw();
 }
 
 function renderGrid() {
@@ -212,14 +274,30 @@ function renderGrid() {
 }
 
 function updateTurnText() {
-  document.getElementById('turnText').innerText = winner ? '' : 'Player ' + player + "'s Turn";
+  if (isDraw || winner) {
+    document.getElementById('turnText').innerText = '';
+  } else {
+    document.getElementById('turnText').innerText = 'Player ' + player + "'s Turn";
+  }
 }
 
 function handleClick(r, c) {
-  if (grid[r][c] !== 0 || winner || (vsAI && player === 2)) return;
-  playClick(); grid[r][c] = player;
-  if (checkWin(player)) { endGame(player); }
-  else { player = player === 1 ? 2 : 1; renderGrid(); updateTurnText(); if (vsAI && player === 2) setTimeout(aiMove, 400); }
+  if (grid[r][c] !== 0 || winner || isDraw || (vsAI && player === 2)) return;
+  playClick();
+  grid[r][c] = player;
+  if (checkWin(player)) {
+    endGame(player);
+  } else {
+    player = player === 1 ? 2 : 1;
+    renderGrid();
+    // Check for draw AFTER switching player so both sides are evaluated fresh
+    if (checkDraw()) {
+      showDraw();
+    } else {
+      updateTurnText();
+      if (vsAI && player === 2) setTimeout(aiMove, 400);
+    }
+  }
 }
 
 function endGame(p) {
@@ -229,6 +307,65 @@ function endGame(p) {
 }
 
 function resetGame() { createGrid(); renderGrid(); updateTurnText(); }
+
+/* ── Draw detection ─────────────────────────────────────────────────────── */
+
+/**
+ * Returns true if player p can STILL potentially win —
+ * i.e. there exists any path from p's start edge to p's end edge
+ * using only cells that are either owned by p OR still empty.
+ * (Opponent-owned cells act as permanent walls.)
+ */
+function canPotentiallyWin(p) {
+  var opp = p === 1 ? 2 : 1;
+  var visited = {};
+
+  function dfs(r, c) {
+    var key = r + '-' + c;
+    if (visited[key]) return false;
+    visited[key] = true;
+    // Reached the goal edge?
+    if ((p === 1 && r === GRID_SIZE - 1) || (p === 2 && c === GRID_SIZE - 1)) return true;
+    for (var d = 0; d < DIRS.length; d++) {
+      var nr = r + DIRS[d][0], nc = c + DIRS[d][1];
+      if (inBounds(nr, nc) && grid[nr][nc] !== opp) {
+        if (dfs(nr, nc)) return true;
+      }
+    }
+    return false;
+  }
+
+  // Start from every cell on p's start edge that isn't blocked by the opponent
+  if (p === 1) {
+    for (var c = 0; c < GRID_SIZE; c++) {
+      if (grid[0][c] !== opp) { if (dfs(0, c)) return true; }
+    }
+  } else {
+    for (var r = 0; r < GRID_SIZE; r++) {
+      if (grid[r][0] !== opp) { if (dfs(r, 0)) return true; }
+    }
+  }
+  return false;
+}
+
+/**
+ * A draw exists when NEITHER player has any remaining winning path.
+ */
+function checkDraw() {
+  return !canPotentiallyWin(1) && !canPotentiallyWin(2);
+}
+
+function showDraw() {
+  isDraw = true;
+  document.getElementById('drawOverlay').classList.add('visible');
+  updateTurnText();
+}
+
+function hideDraw() {
+  document.getElementById('drawOverlay').classList.remove('visible');
+}
+
+/* ── End draw detection ─────────────────────────────────────────────────── */
 
 function toggleMusic() {
   try {
@@ -244,10 +381,21 @@ function toggleMusic() {
 }
 
 function aiMove() {
-  if (winner) return;
+  if (winner || isDraw) return;
   var move = difficulty === 1 ? easyMove() : difficulty === 2 ? mediumMove() : hardMove();
-  playClick(); grid[move[0]][move[1]] = 2;
-  if (checkWin(2)) { endGame(2); } else { player = 1; renderGrid(); updateTurnText(); }
+  playClick();
+  grid[move[0]][move[1]] = 2;
+  if (checkWin(2)) {
+    endGame(2);
+  } else {
+    player = 1;
+    renderGrid();
+    if (checkDraw()) {
+      showDraw();
+    } else {
+      updateTurnText();
+    }
+  }
 }
 
 var DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -390,73 +538,4 @@ function minimaxHard(depth,isMax,alpha,beta){
   var cands=isMax?sortedCandidatesHard(2,10):sortedCandidatesHard(1,10);
   if(isMax){
     var best=-Infinity;
-    for(var i=0;i<cands.length;i++){grid[cands[i][0]][cands[i][1]]=2;var s=minimaxHard(depth-1,false,alpha,beta);grid[cands[i][0]][cands[i][1]]=0;if(s>best)best=s;if(best>alpha)alpha=best;if(alpha>=beta)break;}
-    return best;
-  } else {
-    var best=Infinity;
-    for(var i=0;i<cands.length;i++){grid[cands[i][0]][cands[i][1]]=1;var s=minimaxHard(depth-1,true,alpha,beta);grid[cands[i][0]][cands[i][1]]=0;if(s<best)best=s;if(best<beta)beta=best;if(beta<=alpha)break;}
-    return best;
-  }
-}
-
-function hardMove(){
-  var win=findWinningMove(2);if(win)return win;
-  var block=findWinningMove(1);if(block)return block;
-  var empty=getEmpty();
-  var depth=empty.length>48?2:empty.length>32?3:empty.length>16?4:5;
-  var best=null,bScore=-Infinity,alpha=-Infinity,beta=Infinity;
-  var cands=sortedCandidatesHard(2,14);
-  for(var i=0;i<cands.length;i++){
-    grid[cands[i][0]][cands[i][1]]=2;var s=minimaxHard(depth-1,false,alpha,beta);grid[cands[i][0]][cands[i][1]]=0;
-    if(s>bScore){bScore=s;best=[cands[i][0],cands[i][1]];}
-    if(bScore>alpha)alpha=bScore;
-  }
-  return best||empty[0];
-}
-
-function checkWin(p) {
-  var visited={}, found=false;
-  function dfs(r,c){
-    var key=r+'-'+c; if(visited[key])return; visited[key]=true;
-    if((p===1&&r===GRID_SIZE-1)||(p===2&&c===GRID_SIZE-1)){found=true;return;}
-    for(var d=0;d<DIRS.length;d++){var nr=r+DIRS[d][0],nc=c+DIRS[d][1];if(inBounds(nr,nc)&&grid[nr][nc]===p)dfs(nr,nc);}
-  }
-  if(p===1){for(var c=0;c<GRID_SIZE;c++)if(grid[0][c]===p)dfs(0,c);}
-  else{for(var r=0;r<GRID_SIZE;r++)if(grid[r][0]===p)dfs(r,0);}
-  return found;
-}
-
-function glowWinningTiles(p) {
-  var onPath={};
-  function bfs(startR,startC){
-    var prev={}, queue=[[startR,startC]], reached=[];
-    prev[startR+'-'+startC]=null;
-    while(queue.length){
-      var cur=queue.shift(),r=cur[0],c=cur[1];
-      if((p===1&&r===GRID_SIZE-1)||(p===2&&c===GRID_SIZE-1))reached.push([r,c]);
-      for(var d=0;d<DIRS.length;d++){
-        var nr=r+DIRS[d][0],nc=c+DIRS[d][1],key=nr+'-'+nc;
-        if(inBounds(nr,nc)&&grid[nr][nc]===p&&!(key in prev)){prev[key]=[r,c];queue.push([nr,nc]);}
-      }
-    }
-    for(var i=0;i<reached.length;i++){
-      var node=reached[i];
-      while(node){onPath[node[0]+'-'+node[1]]=true;node=prev[node[0]+'-'+node[1]];}
-    }
-  }
-  if(p===1){for(var c=0;c<GRID_SIZE;c++)if(grid[0][c]===p)bfs(0,c);}
-  else{for(var r=0;r<GRID_SIZE;r++)if(grid[r][0]===p)bfs(r,0);}
-  var el=document.getElementById('grid');
-  for(var r=0;r<GRID_SIZE;r++)for(var c=0;c<GRID_SIZE;c++)if(onPath[r+'-'+c])el.children[r*GRID_SIZE+c].classList.add('win-path');
-}
-
-document.getElementById('startGameBtn').addEventListener('click', startGame);
-document.getElementById('resetBtn').addEventListener('click', resetGame);
-document.getElementById('muteBtn').addEventListener('click', toggleMusic);
-document.getElementById('infoToggle').addEventListener('click', function(){
-  this.classList.toggle('open');
-  document.getElementById('instructions').classList.toggle('open');
-});
-</script>
-</body>
-</html>
+    for(var i=0;i<cands.length;i++){grid[cands[i][0]][cands[i][1]]=2;var s=minimaxHa
