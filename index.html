@@ -61,58 +61,48 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
 
 /* Draw overlay */
 #drawOverlay {
-  display:none;
-  position:absolute;
-  top:0; left:0; width:100%; height:100%;
-  z-index:10;
-  border-radius:6px;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
-  background:rgba(0,0,0,0.72);
-  backdrop-filter:blur(3px);
-  -webkit-backdrop-filter:blur(3px);
-  animation:fadeInOverlay 0.4s ease;
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
 }
-#drawOverlay.visible { display:flex; }
-@keyframes fadeInOverlay {
-  from { opacity:0; transform:scale(0.92); }
-  to   { opacity:1; transform:scale(1); }
-}
+#drawOverlay.show { display: flex; animation: fadeIn 0.35s ease; }
+@keyframes fadeIn { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
 #drawLabel {
-  font-size:clamp(2em,10vw,3.2em);
-  font-weight:900;
-  letter-spacing:0.08em;
-  color:#fff;
-  text-shadow:
-    0 0 12px #fff,
-    0 0 28px #aaa,
-    0 0 48px #888;
-  animation:pulseWhite 1.4s infinite alternate;
+  font-size: clamp(2.2em,11vw,3.6em);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #fff;
+  animation: glow 1.5s ease-in-out infinite alternate;
 }
-@keyframes pulseWhite {
-  0%   { text-shadow:0 0 10px #fff,0 0 24px #aaa; }
-  100% { text-shadow:0 0 22px #fff,0 0 50px #ccc,0 0 80px #999; }
+@keyframes glow {
+  from { text-shadow: 0 0 10px #fff, 0 0 20px #aaa; }
+  to   { text-shadow: 0 0 24px #fff, 0 0 50px #ddd, 0 0 80px #bbb; }
 }
-#drawSubLabel {
-  font-size:clamp(0.8em,3.5vw,1em);
-  color:#ccc;
-  text-align:center;
-  padding:0 16px;
-  line-height:1.5;
+#drawSub {
+  color: #ccc;
+  font-size: clamp(0.8em,3.5vw,1em);
+  text-align: center;
+  padding: 0 18px;
+  line-height: 1.5;
 }
-#drawResetBtn {
-  padding:11px 28px; border:none; border-radius:12px;
-  background:#0ff; color:black; font-weight:bold;
-  font-size:clamp(0.9em,3.5vw,1.05em); cursor:pointer;
-  box-shadow:0 0 10px #0ff,0 0 22px #0ff;
-  transition:transform 0.15s;
-  min-height:44px;
-  -webkit-tap-highlight-color:transparent;
+#drawPlayAgainBtn {
+  padding: 11px 28px; border: none; border-radius: 12px;
+  background: #0ff; color: black; font-weight: bold;
+  font-size: clamp(0.9em,3.5vw,1.05em); cursor: pointer;
+  box-shadow: 0 0 10px #0ff, 0 0 22px #0ff; transition: transform 0.15s;
+  min-height: 44px; -webkit-tap-highlight-color: transparent;
 }
-#drawResetBtn:hover  { transform:scale(1.06); }
-#drawResetBtn:active { transform:scale(0.96); }
+#drawPlayAgainBtn:hover  { transform: scale(1.06); }
+#drawPlayAgainBtn:active { transform: scale(0.96); }
 
 #winnerText { margin-top:14px; font-size:clamp(1em,4vw,1.35em); font-weight:bold; min-height:1.7em; text-align:center; }
 
@@ -175,11 +165,10 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
     <div class="leftGoal"></div>
     <div class="rightGoal"></div>
     <div id="grid" class="grid"></div>
-    <!-- Draw overlay sits inside gridWrapper so it covers only the board -->
     <div id="drawOverlay">
       <div id="drawLabel">DRAW</div>
-      <div id="drawSubLabel">No winning path remains<br>for either player.</div>
-      <button id="drawResetBtn">&#9654; Play Again</button>
+      <div id="drawSub">No winning path remains<br>for either player.</div>
+      <button id="drawPlayAgainBtn">&#9654; Play Again</button>
     </div>
   </div>
   <div id="winnerText"></div>
@@ -208,18 +197,19 @@ body { margin:0; padding:0; font-family:sans-serif; background:black; color:whit
 </div>
 
 <script>
+// ── Constants & state ─────────────────────────────────────────────────────────
 var GRID_SIZE = 8;
-var grid = [], player = 1, winner = null, isDraw = false, vsAI = false, difficulty = 2;
-var music   = document.getElementById('bgMusic');
-var muteBtn = document.getElementById('muteBtn');
+var DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+var grid, player, winner, isDraw, vsAI, difficulty;
+var music    = document.getElementById('bgMusic');
 var audioCtx = null;
 
+// ── Audio ─────────────────────────────────────────────────────────────────────
 function playClick() {
   if (navigator.vibrate) { try { navigator.vibrate(18); } catch(e){} }
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var osc = audioCtx.createOscillator();
-    var gain = audioCtx.createGain();
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.type = 'square';
     osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
@@ -231,32 +221,48 @@ function playClick() {
   } catch(e) {}
 }
 
-function startGame() {
+function toggleMusic() {
+  var btn = document.getElementById('muteBtn');
   try {
-    vsAI       = document.getElementById('modeSelect').value === 'ai';
-    difficulty = parseInt(document.getElementById('difficultySelect').value);
-    document.getElementById('startScreen').style.display = 'none';
-    document.getElementById('gameScreen').style.display  = 'flex';
-    try {
+    if (music.paused) {
       var p = music.play();
-      if (p && typeof p.catch === 'function') p.catch(function(){});
-    } catch(e) {}
-    createGrid();
-    renderGrid();
-    updateTurnText();
-    if (vsAI && player === 2) setTimeout(aiMove, 400);
-  } catch(e) {
-    console.error('startGame error:', e);
+      if (p && p.catch) p.catch(function(){});
+      btn.innerText = 'Mute';
+    } else {
+      music.pause();
+      btn.innerText = 'Unmute';
+    }
+  } catch(e) {}
+}
+
+// ── Start / Init ──────────────────────────────────────────────────────────────
+function startGame() {
+  vsAI       = document.getElementById('modeSelect').value === 'ai';
+  difficulty = parseInt(document.getElementById('difficultySelect').value);
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display  = 'flex';
+  try {
+    var p = music.play();
+    if (p && p.catch) p.catch(function(){});
+  } catch(e) {}
+  initGame();
+}
+
+function initGame() {
+  player = 1; winner = null; isDraw = false;
+  grid = [];
+  for (var r = 0; r < GRID_SIZE; r++) {
+    grid[r] = [];
+    for (var c = 0; c < GRID_SIZE; c++) grid[r][c] = 0;
   }
-}
-
-function createGrid() {
-  grid = []; player = 1; winner = null; isDraw = false;
-  for (var r = 0; r < GRID_SIZE; r++) { grid[r] = []; for (var c = 0; c < GRID_SIZE; c++) grid[r][c] = 0; }
   document.getElementById('winnerText').innerText = '';
-  hideDraw();
+  document.getElementById('drawOverlay').classList.remove('show');
+  renderGrid();
+  updateTurnText();
+  if (vsAI && player === 2) setTimeout(aiMove, 400);
 }
 
+// ── Rendering ─────────────────────────────────────────────────────────────────
 function renderGrid() {
   var el = document.getElementById('grid');
   el.style.gridTemplateColumns = 'repeat(' + GRID_SIZE + ', 1fr)';
@@ -267,37 +273,30 @@ function renderGrid() {
       cell.className = 'cell';
       if (grid[r][c] === 1) cell.classList.add('blue');
       if (grid[r][c] === 2) cell.classList.add('red');
-      (function(row, col) { cell.addEventListener('click', function(){ handleClick(row, col); }); })(r, c);
+      (function(row, col) {
+        cell.addEventListener('click', function() { handleClick(row, col); });
+      })(r, c);
       el.appendChild(cell);
     }
   }
 }
 
 function updateTurnText() {
-  if (isDraw || winner) {
-    document.getElementById('turnText').innerText = '';
-  } else {
-    document.getElementById('turnText').innerText = 'Player ' + player + "'s Turn";
-  }
+  document.getElementById('turnText').innerText =
+    (winner || isDraw) ? '' : ('Player ' + player + "'s Turn");
 }
 
+// ── Click / game flow ─────────────────────────────────────────────────────────
 function handleClick(r, c) {
   if (grid[r][c] !== 0 || winner || isDraw || (vsAI && player === 2)) return;
   playClick();
   grid[r][c] = player;
-  if (checkWin(player)) {
-    endGame(player);
-  } else {
-    player = player === 1 ? 2 : 1;
-    renderGrid();
-    // Check for draw AFTER switching player so both sides are evaluated fresh
-    if (checkDraw()) {
-      showDraw();
-    } else {
-      updateTurnText();
-      if (vsAI && player === 2) setTimeout(aiMove, 400);
-    }
-  }
+  if (checkWin(player)) { endGame(player); return; }
+  player = (player === 1) ? 2 : 1;
+  renderGrid();
+  updateTurnText();
+  if (checkDraw()) { showDraw(); return; }
+  if (vsAI && player === 2) setTimeout(aiMove, 400);
 }
 
 function endGame(p) {
@@ -306,105 +305,66 @@ function endGame(p) {
   renderGrid(); updateTurnText(); glowWinningTiles(p);
 }
 
-function resetGame() { createGrid(); renderGrid(); updateTurnText(); }
-
-/* ── Draw detection ─────────────────────────────────────────────────────── */
-
-/**
- * Returns true if player p can STILL potentially win —
- * i.e. there exists any path from p's start edge to p's end edge
- * using only cells that are either owned by p OR still empty.
- * (Opponent-owned cells act as permanent walls.)
- */
+// ── Draw detection ────────────────────────────────────────────────────────────
 function canPotentiallyWin(p) {
-  var opp = p === 1 ? 2 : 1;
+  var opp = (p === 1) ? 2 : 1;
   var visited = {};
-
   function dfs(r, c) {
-    var key = r + '-' + c;
-    if (visited[key]) return false;
-    visited[key] = true;
-    // Reached the goal edge?
-    if ((p === 1 && r === GRID_SIZE - 1) || (p === 2 && c === GRID_SIZE - 1)) return true;
-    for (var d = 0; d < DIRS.length; d++) {
+    var k = r + ',' + c;
+    if (visited[k]) return false;
+    visited[k] = true;
+    if (p === 1 && r === GRID_SIZE - 1) return true;
+    if (p === 2 && c === GRID_SIZE - 1) return true;
+    for (var d = 0; d < 4; d++) {
       var nr = r + DIRS[d][0], nc = c + DIRS[d][1];
-      if (inBounds(nr, nc) && grid[nr][nc] !== opp) {
+      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && grid[nr][nc] !== opp) {
         if (dfs(nr, nc)) return true;
       }
     }
     return false;
   }
-
-  // Start from every cell on p's start edge that isn't blocked by the opponent
   if (p === 1) {
     for (var c = 0; c < GRID_SIZE; c++) {
-      if (grid[0][c] !== opp) { if (dfs(0, c)) return true; }
+      if (grid[0][c] !== opp && dfs(0, c)) return true;
     }
   } else {
     for (var r = 0; r < GRID_SIZE; r++) {
-      if (grid[r][0] !== opp) { if (dfs(r, 0)) return true; }
+      if (grid[r][0] !== opp && dfs(r, 0)) return true;
     }
   }
   return false;
 }
 
-/**
- * A draw exists when NEITHER player has any remaining winning path.
- */
 function checkDraw() {
   return !canPotentiallyWin(1) && !canPotentiallyWin(2);
 }
 
 function showDraw() {
   isDraw = true;
-  document.getElementById('drawOverlay').classList.add('visible');
   updateTurnText();
+  document.getElementById('drawOverlay').classList.add('show');
 }
 
-function hideDraw() {
-  document.getElementById('drawOverlay').classList.remove('visible');
-}
-
-/* ── End draw detection ─────────────────────────────────────────────────── */
-
-function toggleMusic() {
-  try {
-    if (music.paused) {
-      var p = music.play();
-      if (p && typeof p.catch === 'function') p.catch(function(){});
-      muteBtn.innerText = 'Mute';
-    } else {
-      music.pause();
-      muteBtn.innerText = 'Unmute';
-    }
-  } catch(e) {}
-}
-
+// ── AI ────────────────────────────────────────────────────────────────────────
 function aiMove() {
   if (winner || isDraw) return;
   var move = difficulty === 1 ? easyMove() : difficulty === 2 ? mediumMove() : hardMove();
+  if (!move) return;
   playClick();
   grid[move[0]][move[1]] = 2;
-  if (checkWin(2)) {
-    endGame(2);
-  } else {
-    player = 1;
-    renderGrid();
-    if (checkDraw()) {
-      showDraw();
-    } else {
-      updateTurnText();
-    }
-  }
+  if (checkWin(2)) { endGame(2); return; }
+  player = 1;
+  renderGrid(); updateTurnText();
+  if (checkDraw()) showDraw();
 }
-
-var DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
 
 function inBounds(r, c) { return r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE; }
 
 function getEmpty() {
   var out = [];
-  for (var r = 0; r < GRID_SIZE; r++) for (var c = 0; c < GRID_SIZE; c++) if (grid[r][c] === 0) out.push([r,c]);
+  for (var r = 0; r < GRID_SIZE; r++)
+    for (var c = 0; c < GRID_SIZE; c++)
+      if (grid[r][c] === 0) out.push([r, c]);
   return out;
 }
 
@@ -412,130 +372,169 @@ function findWinningMove(p) {
   for (var r = 0; r < GRID_SIZE; r++) for (var c = 0; c < GRID_SIZE; c++) {
     if (grid[r][c] !== 0) continue;
     grid[r][c] = p; var w = checkWin(p); grid[r][c] = 0;
-    if (w) return [r,c];
+    if (w) return [r, c];
   }
   return null;
 }
 
 function shortestPath(p) {
-  var opp = p === 1 ? 2 : 1;
-  var dist = []; for (var i = 0; i < GRID_SIZE; i++) { dist[i] = []; for (var j = 0; j < GRID_SIZE; j++) dist[i][j] = Infinity; }
+  var opp = (p === 1) ? 2 : 1;
+  var dist = [];
+  var i, j, r, c, d, nr, nc, ncost, cost, node, cr, cc, ccost;
+  for (i = 0; i < GRID_SIZE; i++) { dist[i] = []; for (j = 0; j < GRID_SIZE; j++) dist[i][j] = Infinity; }
   var pq = [];
-  if (p === 1) { for (var c = 0; c < GRID_SIZE; c++) { if (grid[0][c]===opp) continue; var cost=grid[0][c]===p?0:1; dist[0][c]=cost; pq.push({r:0,c:c,cost:cost}); } }
-  else         { for (var r = 0; r < GRID_SIZE; r++) { if (grid[r][0]===opp) continue; var cost=grid[r][0]===p?0:1; dist[r][0]=cost; pq.push({r:r,c:0,cost:cost}); } }
+  if (p === 1) {
+    for (c = 0; c < GRID_SIZE; c++) {
+      if (grid[0][c] === opp) continue;
+      cost = (grid[0][c] === p) ? 0 : 1;
+      dist[0][c] = cost; pq.push({r:0, c:c, cost:cost});
+    }
+  } else {
+    for (r = 0; r < GRID_SIZE; r++) {
+      if (grid[r][0] === opp) continue;
+      cost = (grid[r][0] === p) ? 0 : 1;
+      dist[r][0] = cost; pq.push({r:r, c:0, cost:cost});
+    }
+  }
   while (pq.length) {
-    pq.sort(function(a,b){return a.cost-b.cost;});
-    var node=pq.shift(); var r=node.r,c=node.c,cost=node.cost;
-    if (cost > dist[r][c]) continue;
-    for (var d = 0; d < DIRS.length; d++) {
-      var nr=r+DIRS[d][0], nc=c+DIRS[d][1];
-      if (!inBounds(nr,nc)||grid[nr][nc]===opp) continue;
-      var nc2=dist[r][c]+(grid[nr][nc]===p?0:1);
-      if (nc2 < dist[nr][nc]) { dist[nr][nc]=nc2; pq.push({r:nr,c:nc,cost:nc2}); }
+    pq.sort(function(a, b) { return a.cost - b.cost; });
+    node = pq.shift(); cr = node.r; cc = node.c; ccost = node.cost;
+    if (ccost > dist[cr][cc]) continue;
+    for (d = 0; d < DIRS.length; d++) {
+      nr = cr + DIRS[d][0]; nc = cc + DIRS[d][1];
+      if (!inBounds(nr, nc) || grid[nr][nc] === opp) continue;
+      ncost = dist[cr][cc] + ((grid[nr][nc] === p) ? 0 : 1);
+      if (ncost < dist[nr][nc]) { dist[nr][nc] = ncost; pq.push({r:nr, c:nc, cost:ncost}); }
     }
   }
   var best = Infinity;
-  if (p===1) { for (var c=0;c<GRID_SIZE;c++) best=Math.min(best,dist[GRID_SIZE-1][c]); }
-  else       { for (var r=0;r<GRID_SIZE;r++) best=Math.min(best,dist[r][GRID_SIZE-1]); }
+  if (p === 1) { for (c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]); }
+  else         { for (r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]); }
   return best;
 }
 
 function easyMove() {
   var block = findWinningMove(1); if (block) return block;
-  var e = getEmpty(); return e[Math.floor(Math.random()*e.length)];
+  var e = getEmpty(); return e[Math.floor(Math.random() * e.length)];
 }
 
 function evaluate() {
-  var my=shortestPath(2),op=shortestPath(1);
-  var ms=my===Infinity?100:my, os=op===Infinity?100:op;
-  return (os-ms)+Math.max(0,6-ms)*0.5-Math.max(0,6-os)*1.2;
+  var my = shortestPath(2), op = shortestPath(1);
+  var ms = (my === Infinity) ? 100 : my, os = (op === Infinity) ? 100 : op;
+  return (os - ms) + Math.max(0, 6 - ms) * 0.5 - Math.max(0, 6 - os) * 1.2;
 }
 
 function sortedCandidates(p, limit) {
-  if (!limit) limit = 12;
+  limit = limit || 12;
   var items = getEmpty().map(function(rc) {
-    grid[rc[0]][rc[1]]=p; var s=shortestPath(p===1?2:1)-shortestPath(p); grid[rc[0]][rc[1]]=0;
-    return {r:rc[0],c:rc[1],s:s};
+    grid[rc[0]][rc[1]] = p;
+    var s = shortestPath((p === 1) ? 2 : 1) - shortestPath(p);
+    grid[rc[0]][rc[1]] = 0;
+    return {r: rc[0], c: rc[1], s: s};
   });
-  items.sort(function(a,b){return b.s-a.s;}); items=items.slice(0,limit);
-  return items.map(function(x){return [x.r,x.c];});
+  items.sort(function(a, b) { return b.s - a.s; });
+  return items.slice(0, limit).map(function(x) { return [x.r, x.c]; });
 }
 
 function mediumMove() {
-  var win=findWinningMove(2); if(win) return win;
-  var block=findWinningMove(1); if(block) return block;
-  var cands=sortedCandidates(2), best=null, bScore=-Infinity;
-  for (var i=0;i<cands.length;i++) {
-    var r=cands[i][0],c=cands[i][1]; grid[r][c]=2;
+  var win = findWinningMove(2); if (win) return win;
+  var block = findWinningMove(1); if (block) return block;
+  var cands = sortedCandidates(2), best = null, bScore = -Infinity;
+  for (var i = 0; i < cands.length; i++) {
+    var r = cands[i][0], c = cands[i][1]; grid[r][c] = 2;
     var s;
-    if (findWinningMove(1)) { s=-5000; }
-    else { var hc=sortedCandidates(1); if(hc.length){grid[hc[0][0]][hc[0][1]]=1;s=evaluate();grid[hc[0][0]][hc[0][1]]=0;}else s=evaluate(); }
-    grid[r][c]=0; s+=Math.random()*0.3;
-    if (s>bScore){bScore=s;best=[r,c];}
+    if (findWinningMove(1)) { s = -5000; }
+    else {
+      var hc = sortedCandidates(1);
+      if (hc.length) { grid[hc[0][0]][hc[0][1]] = 1; s = evaluate(); grid[hc[0][0]][hc[0][1]] = 0; }
+      else s = evaluate();
+    }
+    grid[r][c] = 0; s += Math.random() * 0.3;
+    if (s > bScore) { bScore = s; best = [r, c]; }
   }
-  return best||getEmpty()[0];
+  return best || getEmpty()[0];
 }
 
 function virtualConnectionScore(p) {
-  var score=0, own=[];
-  for(var r=0;r<GRID_SIZE;r++) for(var c=0;c<GRID_SIZE;c++) if(grid[r][c]===p) own.push([r,c]);
-  for(var i=0;i<own.length;i++){
-    var nb={};
-    for(var d=0;d<DIRS.length;d++){var nr=own[i][0]+DIRS[d][0],nc=own[i][1]+DIRS[d][1];if(inBounds(nr,nc)&&grid[nr][nc]===0)nb[nr+'-'+nc]=true;}
-    for(var j=0;j<own.length;j++){
-      if(j===i) continue;
-      for(var d=0;d<DIRS.length;d++){var nr=own[j][0]+DIRS[d][0],nc=own[j][1]+DIRS[d][1];if(nb[nr+'-'+nc]){score+=1.5;break;}}
+  var score = 0, own = [], i, j, d, nr, nc;
+  for (var r = 0; r < GRID_SIZE; r++) for (var c = 0; c < GRID_SIZE; c++) if (grid[r][c] === p) own.push([r, c]);
+  for (i = 0; i < own.length; i++) {
+    var nb = {};
+    for (d = 0; d < DIRS.length; d++) {
+      nr = own[i][0] + DIRS[d][0]; nc = own[i][1] + DIRS[d][1];
+      if (inBounds(nr, nc) && grid[nr][nc] === 0) nb[nr + '-' + nc] = true;
+    }
+    for (j = 0; j < own.length; j++) {
+      if (j === i) continue;
+      for (d = 0; d < DIRS.length; d++) {
+        nr = own[j][0] + DIRS[d][0]; nc = own[j][1] + DIRS[d][1];
+        if (nb[nr + '-' + nc]) { score += 1.5; break; }
+      }
     }
   }
   return score;
 }
 
 function criticalCells(p) {
-  var opp=p===1?2:1;
-  var dist=[]; for(var i=0;i<GRID_SIZE;i++){dist[i]=[];for(var j=0;j<GRID_SIZE;j++)dist[i][j]=Infinity;}
-  var pq=[];
-  if(p===1){for(var c=0;c<GRID_SIZE;c++){if(grid[0][c]===opp)continue;var cost=grid[0][c]===p?0:1;dist[0][c]=cost;pq.push({r:0,c:c,cost:cost});}}
-  else{for(var r=0;r<GRID_SIZE;r++){if(grid[r][0]===opp)continue;var cost=grid[r][0]===p?0:1;dist[r][0]=cost;pq.push({r:r,c:0,cost:cost});}}
-  while(pq.length){
-    pq.sort(function(a,b){return a.cost-b.cost;});
-    var node=pq.shift();var r=node.r,c=node.c,cost=node.cost;if(cost>dist[r][c])continue;
-    for(var d=0;d<DIRS.length;d++){var nr=r+DIRS[d][0],nc=c+DIRS[d][1];if(!inBounds(nr,nc)||grid[nr][nc]===opp)continue;var nc2=dist[r][c]+(grid[nr][nc]===p?0:1);if(nc2<dist[nr][nc]){dist[nr][nc]=nc2;pq.push({r:nr,c:nc,cost:nc2});}}
+  var opp = (p === 1) ? 2 : 1;
+  var dist = [], i, j, r, c, d, nr, nc, ncost, cost, node, cr, cc, ccost;
+  for (i = 0; i < GRID_SIZE; i++) { dist[i] = []; for (j = 0; j < GRID_SIZE; j++) dist[i][j] = Infinity; }
+  var pq = [];
+  if (p === 1) {
+    for (c = 0; c < GRID_SIZE; c++) {
+      if (grid[0][c] === opp) continue;
+      cost = (grid[0][c] === p) ? 0 : 1;
+      dist[0][c] = cost; pq.push({r:0, c:c, cost:cost});
+    }
+  } else {
+    for (r = 0; r < GRID_SIZE; r++) {
+      if (grid[r][0] === opp) continue;
+      cost = (grid[r][0] === p) ? 0 : 1;
+      dist[r][0] = cost; pq.push({r:r, c:0, cost:cost});
+    }
   }
-  var best=Infinity;
-  if(p===1)for(var c=0;c<GRID_SIZE;c++)best=Math.min(best,dist[GRID_SIZE-1][c]);
-  else for(var r=0;r<GRID_SIZE;r++)best=Math.min(best,dist[r][GRID_SIZE-1]);
-  if(best===Infinity)return 0;
-  var count=0;
-  for(var r=0;r<GRID_SIZE;r++)for(var c=0;c<GRID_SIZE;c++)if(dist[r][c]!==Infinity&&dist[r][c]<=best&&grid[r][c]===p)count++;
+  while (pq.length) {
+    pq.sort(function(a, b) { return a.cost - b.cost; });
+    node = pq.shift(); cr = node.r; cc = node.c; ccost = node.cost;
+    if (ccost > dist[cr][cc]) continue;
+    for (d = 0; d < DIRS.length; d++) {
+      nr = cr + DIRS[d][0]; nc = cc + DIRS[d][1];
+      if (!inBounds(nr, nc) || grid[nr][nc] === opp) continue;
+      ncost = dist[cr][cc] + ((grid[nr][nc] === p) ? 0 : 1);
+      if (ncost < dist[nr][nc]) { dist[nr][nc] = ncost; pq.push({r:nr, c:nc, cost:ncost}); }
+    }
+  }
+  var best = Infinity;
+  if (p === 1) for (c = 0; c < GRID_SIZE; c++) best = Math.min(best, dist[GRID_SIZE-1][c]);
+  else         for (r = 0; r < GRID_SIZE; r++) best = Math.min(best, dist[r][GRID_SIZE-1]);
+  if (best === Infinity) return 0;
+  var count = 0;
+  for (r = 0; r < GRID_SIZE; r++) for (c = 0; c < GRID_SIZE; c++)
+    if (dist[r][c] !== Infinity && dist[r][c] <= best && grid[r][c] === p) count++;
   return count;
 }
 
 function evaluateHard() {
-  var mr=shortestPath(2),or_=shortestPath(1);
-  var mp=mr===Infinity?999:mr,op=or_===Infinity?999:or_;
-  var danger=op<=3?(4-op)*5.0:0, win=mp<=3?(4-mp)*3.0:0;
-  return (op-mp)*2.0+win-danger+criticalCells(2)*0.4-criticalCells(1)*0.3+virtualConnectionScore(2)*0.5-virtualConnectionScore(1)*0.4;
+  var mr = shortestPath(2), or_ = shortestPath(1);
+  var mp = (mr === Infinity) ? 999 : mr, op = (or_ === Infinity) ? 999 : or_;
+  var danger = (op <= 3) ? (4 - op) * 5.0 : 0, win = (mp <= 3) ? (4 - mp) * 3.0 : 0;
+  return (op - mp) * 2.0 + win - danger
+       + criticalCells(2) * 0.4 - criticalCells(1) * 0.3
+       + virtualConnectionScore(2) * 0.5 - virtualConnectionScore(1) * 0.4;
 }
 
 function sortedCandidatesHard(p, limit) {
-  if (!limit) limit=10;
-  var opp=p===1?2:1, bm=shortestPath(p), bo=shortestPath(opp);
-  var items=getEmpty().map(function(rc){
-    grid[rc[0]][rc[1]]=p;
-    var mi=bm-shortestPath(p),oh=shortestPath(opp)-bo,vc=virtualConnectionScore(p)*0.5;
-    grid[rc[0]][rc[1]]=0;
-    return {r:rc[0],c:rc[1],s:mi*1.5+oh*2.0+vc};
+  limit = limit || 10;
+  var opp = (p === 1) ? 2 : 1, bm = shortestPath(p), bo = shortestPath(opp);
+  var items = getEmpty().map(function(rc) {
+    grid[rc[0]][rc[1]] = p;
+    var mi = bm - shortestPath(p), oh = shortestPath(opp) - bo, vc = virtualConnectionScore(p) * 0.5;
+    grid[rc[0]][rc[1]] = 0;
+    return {r: rc[0], c: rc[1], s: mi * 1.5 + oh * 2.0 + vc};
   });
-  items.sort(function(a,b){return b.s-a.s;}); items=items.slice(0,limit);
-  return items.map(function(x){return [x.r,x.c];});
+  items.sort(function(a, b) { return b.s - a.s; });
+  return items.slice(0, limit).map(function(x) { return [x.r, x.c]; });
 }
 
-function minimaxHard(depth,isMax,alpha,beta){
-  if(checkWin(2))return 20000+depth;
-  if(checkWin(1))return -20000-depth;
-  if(depth===0)return evaluateHard();
-  var empty=getEmpty(); if(!empty.length)return evaluateHard();
-  var cands=isMax?sortedCandidatesHard(2,10):sortedCandidatesHard(1,10);
-  if(isMax){
-    var best=-Infinity;
-    for(var i=0;i<cands.length;i++){grid[cands[i][0]][cands[i][1]]=2;var s=minimaxHa
+function minimaxHard(depth, isMax, alpha, beta) {
+  if (checkWin(2)) return 20000 + 
